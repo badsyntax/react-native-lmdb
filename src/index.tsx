@@ -28,8 +28,10 @@ export function open(dbName: string, mapSize = defaultMapSize) {
     throw err;
   }
   return {
-    put: (key: string, value: string) => Lmdb.put(key, value),
-    putBatch: (valueMap: Record<string, string>) => Lmdb.putBatch(valueMap),
+    put: (key: string, value: string): void => Lmdb.put(key, value),
+    putBatch: (valueMap: Record<string, string>): void =>
+      Lmdb.putBatch(valueMap),
     get: (key: string): string => Lmdb.get(key),
+    del: (key: string): void => Lmdb.del(key),
   };
 }

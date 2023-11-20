@@ -43,4 +43,12 @@ namespace rnlmdb {
         }
         wtxn.commit();
     }
+
+    void del(std::string key)
+    {
+        auto wtxn = lmdb::txn::begin(env);
+        auto dbi = lmdb::dbi::open(wtxn, nullptr);
+        dbi.del(wtxn, lmdb::val(key));
+        wtxn.commit();
+    }
 }

@@ -73,4 +73,10 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(get:(NSString *)key)
     }
 }
 
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(del:(NSString *)key)
+{
+    rnlmdb::del([key UTF8String]);
+    return nil;
+}
+
 @end
