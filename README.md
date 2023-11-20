@@ -15,6 +15,14 @@ Initial benchmarks show good performance:
 | get 1000 items   | 4.42ms   |
 | get 10_000 items | 44.25ms  |
 
+## LMDB
+
+> Lightning Memory-Mapped Embedded Database
+
+LMDB is an embedded transactional database in the form of a key-value store. It's fast, small, and can handle large amounts of data. 
+
+https://www.symas.com/lmdb
+
 ## Installation
 
 ```sh
@@ -38,6 +46,10 @@ console.log(get('key2'));
 ## Contributing
 
 See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+
+## Credits
+
+Thanks to [lmdb++](https://github.com/drycpp/lmdbxx) for the useful c++ wrapper.
 
 ## License
 
