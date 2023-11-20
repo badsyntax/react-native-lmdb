@@ -17,20 +17,19 @@ const Lmdb = NativeModules.Lmdb
       }
     );
 
-export function open(dbName: string) {
+const defaultMapSize = 1024 * 1024 * 100; // 100mb
+
+export function open(dbName: string, mapSize = defaultMapSize) {
   let err: any;
-  Lmdb.open(dbName, (e: any) => {
+  Lmdb.open(dbName, mapSize, (e: any) => {
     err = e;
   });
   if (err) {
     throw err;
   }
-}
-
-export function put(key: string, value: string) {
-  Lmdb.put(key, value);
-}
-
-export function get(key: string): string {
-  return Lmdb.get(key);
+  return {
+    put: (key: string, value: string) => Lmdb.put(key, value),
+    putBatch: (valueMap: Record<string, string>) => Lmdb.putBatch(valueMap),
+    get: (key: string): string => Lmdb.get(key),
+  };
 }

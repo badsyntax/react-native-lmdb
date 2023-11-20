@@ -1,10 +1,10 @@
 import * as React from 'react';
 
 import { StyleSheet, View, Text } from 'react-native';
-import { get, open, put } from 'react-native-lmdb';
+import { open } from 'react-native-lmdb';
 
 const nowOpen = performance.now();
-open('mydb.mdb');
+const { put, get, putBatch, stat } = open('mydb.mdb');
 const endOpen = performance.now() - nowOpen;
 
 const nowPut = performance.now();
@@ -22,6 +22,13 @@ for (let i = 0; i < 10_000; i++) {
   put(`key${i}`, `value${i}`);
 }
 const endBatchPut = performance.now() - nowBatchPut;
+
+putBatch({
+  key1: 'value1',
+  key2: 'value2',
+});
+
+console.log(stat());
 
 const nowBatchGet = performance.now();
 for (let i = 0; i < 10_000; i++) {

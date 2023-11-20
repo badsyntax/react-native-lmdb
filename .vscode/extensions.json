@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "EditorConfig.EditorConfig",
+    "esbenp.prettier-vscode",
+    "msjsdiag.vscode-react-native",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}

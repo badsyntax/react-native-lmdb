@@ -5,13 +5,19 @@
 @implementation Lmdb
 RCT_EXPORT_MODULE()
 
-
-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withErrorCallback: (RCTResponseSenderBlock)callback)
+NSURL *get_db_path(NSString *dbName)
 {
     NSURL *documentsPath = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory
                                                                    inDomains:NSUserDomainMask] lastObject];
 
     NSURL *dbPath = [documentsPath URLByAppendingPathComponent:dbName];
+
+    return dbPath;
+}
+
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withMapSize:(nonnull NSNumber *)mapSize withErrorCallback:(RCTResponseSenderBlock)callback)
+{
+    NSURL *dbPath = get_db_path(dbName);
 
     NSError * error = nil;
     [[NSFileManager defaultManager] createDirectoryAtPath:dbPath.path
@@ -25,7 +31,7 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withErrorCallback
     }
 
     try {
-        rnlmdb::open([dbPath.path UTF8String]);
+        rnlmdb::open([dbPath.path UTF8String], [mapSize longValue]);
         callback(@[[NSNull null],
                    [NSNumber numberWithInt:0]]);
     } catch (lmdb::error& error) {
@@ -42,10 +48,23 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(put:(NSString *)key withValue:(NSString *
     return nil;
 }
 
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(putBatch:(NSDictionary *)valueDict)
+{
+    std::unordered_map<std::string, std::string> valueMap;
+    for (id keyId in [valueDict allKeys])
+    {
+        NSString *value = [[valueDict objectForKey: keyId] stringValue];
+        NSString *key = [keyId stringValue];
+        valueMap[[key UTF8String]] = [value UTF8String];
+    }
+    rnlmdb::putBatch(valueMap);
+    return nil;
+}
+
+
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(get:(NSString *)key)
 {
     return @(rnlmdb::get([key UTF8String]).c_str());
 }
-
 
 @end

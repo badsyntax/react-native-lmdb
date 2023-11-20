@@ -24,9 +24,9 @@ npm install react-native-lmdb
 ## Usage
 
 ```js
-import { open, put, get } from 'react-native-lmdb';
+import { open } from 'react-native-lmdb';
 
-open('mydb.mdb');
+const { put, get } = open('mydb.mdb');
 
 put('key1', 'value1');
 put('key2', 'value2');

@@ -5,8 +5,8 @@ namespace rnlmdb {
 
     lmdb::env env = lmdb::env::create();
 
-    void open(std::string dbName) {
-        env.set_mapsize(1UL * 1024UL * 1024UL * 1024UL); /* max db size (1 GiB) */
+    void open(std::string dbName, long mapsize) {
+        env.set_mapsize(mapsize);
         env.open(dbName.c_str(), MDB_CREATE, 0664);
     }
 
@@ -24,9 +24,20 @@ namespace rnlmdb {
 
     void put(std::string key, std::string value)
     {
-         auto wtxn = lmdb::txn::begin(env);
-         auto dbi = lmdb::dbi::open(wtxn, nullptr);
-         dbi.put(wtxn, key.c_str(), value.c_str());
-         wtxn.commit();
-     }
+        auto wtxn = lmdb::txn::begin(env);
+        auto dbi = lmdb::dbi::open(wtxn, nullptr);
+        dbi.put(wtxn, key.c_str(), value.c_str());
+        wtxn.commit();
+    }
+
+    void putBatch(std::unordered_map<std::string, std::string> batch)
+    {
+        auto wtxn = lmdb::txn::begin(env);
+        auto dbi = lmdb::dbi::open(wtxn, nullptr);
+        for (auto const& [key, value] : batch)
+        {
+            dbi.put(wtxn, key.c_str(), value.c_str());
+        }
+        wtxn.commit();
+    }
 }
