@@ -4,7 +4,7 @@ import { StyleSheet, View, Text } from 'react-native';
 import { open } from 'react-native-lmdb';
 
 const nowOpen = performance.now();
-const { put, get, putBatch, stat } = open('mydb.mdb');
+const { put, get, putBatch } = open('mydb.mdb');
 const endOpen = performance.now() - nowOpen;
 
 const nowPut = performance.now();
@@ -27,8 +27,6 @@ putBatch({
   key1: 'value1',
   key2: 'value2',
 });
-
-console.log(stat());
 
 const nowBatchGet = performance.now();
 for (let i = 0; i < 10_000; i++) {

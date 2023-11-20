@@ -10,16 +10,19 @@ namespace rnlmdb {
         env.open(dbName.c_str(), MDB_CREATE, 0664);
     }
 
-    std::string get(std::string key)
+    std::optional<std::string> get(std::string key)
     {
         auto rtxn = lmdb::txn::begin(env, nullptr, MDB_RDONLY);
         auto dbi = lmdb::dbi::open(rtxn, nullptr);
         auto keyValue = lmdb::val(key);
         auto dataValue = lmdb::val();
-        ::mdb_get(rtxn, dbi, keyValue, dataValue);
-        auto value = dataValue.data();
+        auto rc = ::mdb_get(rtxn, dbi, keyValue, dataValue);
         rtxn.abort();
-        return value;
+        if (rc != 0) {
+            return std::nullopt;
+        } else {
+            return dataValue.data();
+        }
     }
 
     void put(std::string key, std::string value)

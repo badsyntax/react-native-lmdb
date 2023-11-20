@@ -17,11 +17,16 @@ Initial benchmarks show good performance:
 
 ## LMDB
 
-> Lightning Memory-Mapped Embedded Database
+> Lightning Memory-Mapped Database
 
-LMDB is an embedded transactional database in the form of a key-value store. It's fast, small, and can handle large amounts of data. 
+LMDB is an embedded transactional database in the form of a key-value store. It's fast, small, and can handle large amounts of data.
 
 https://www.symas.com/lmdb
+
+## Goals of this Project
+
+- Simple API
+- Performance over features
 
 ## Installation
 
@@ -49,7 +54,8 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 
 ## Credits
 
-Thanks to [lmdb++](https://github.com/drycpp/lmdbxx) for the useful c++ wrapper.
+- Thanks to [lmdb++](https://github.com/drycpp/lmdbxx) for the useful c++ wrapper.
+- Thanks to [SwiftLMDB](https://github.com/agisboye/SwiftLMDB) for a good overview of how to use LMDB.
 
 ## License
 

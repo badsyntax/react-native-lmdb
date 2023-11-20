@@ -19,7 +19,7 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withMapSize:(nonn
 {
     NSURL *dbPath = get_db_path(dbName);
 
-    NSError * error = nil;
+    NSError *error = nil;
     [[NSFileManager defaultManager] createDirectoryAtPath:dbPath.path
                               withIntermediateDirectories:YES
                                                attributes:nil
@@ -64,7 +64,13 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(putBatch:(NSDictionary *)valueDict)
 
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(get:(NSString *)key)
 {
-    return @(rnlmdb::get([key UTF8String]).c_str());
+    auto optionalValue = rnlmdb::get([key UTF8String]);
+    if (optionalValue.has_value()) {
+        auto value = *std::move(optionalValue);
+        return @(value.c_str());
+    } else {
+        return nil;
+    }
 }
 
 @end
