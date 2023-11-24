@@ -2,15 +2,18 @@
 #include "lmdb++.h"
 
 namespace rnlmdb {
+    lmdb::env env = nullptr;
 
-    lmdb::env env = lmdb::env::create();
-
-    void open(std::string dbName, long mapsize) {
-        env.set_mapsize(mapsize);
-        env.open(dbName.c_str(), MDB_CREATE, 0664);
+    void open(std::string dbPath, double mapSize) {
+        if (env != nullptr) {
+            throw std::runtime_error("environment already open");
+        }
+        env = lmdb::env::create();
+        env.set_mapsize((long)mapSize);
+        env.open(dbPath.c_str(), MDB_CREATE, 0664);
     }
 
-    std::optional<std::string> get(std::string key)
+    std::string get(std::string key)
     {
         auto rtxn = lmdb::txn::begin(env, nullptr, MDB_RDONLY);
         auto dbi = lmdb::dbi::open(rtxn, nullptr);
@@ -19,7 +22,7 @@ namespace rnlmdb {
         auto rc = ::mdb_get(rtxn, dbi, keyValue, dataValue);
         rtxn.abort();
         if (rc != 0) {
-            return std::nullopt;
+            return nullptr;
         } else {
             return dataValue.data();
         }
@@ -30,17 +33,6 @@ namespace rnlmdb {
         auto wtxn = lmdb::txn::begin(env);
         auto dbi = lmdb::dbi::open(wtxn, nullptr);
         dbi.put(wtxn, key.c_str(), value.c_str());
-        wtxn.commit();
-    }
-
-    void putBatch(std::unordered_map<std::string, std::string> batch)
-    {
-        auto wtxn = lmdb::txn::begin(env);
-        auto dbi = lmdb::dbi::open(wtxn, nullptr);
-        for (auto const& [key, value] : batch)
-        {
-            dbi.put(wtxn, key.c_str(), value.c_str());
-        }
         wtxn.commit();
     }
 

@@ -4,12 +4,18 @@ set (CMAKE_VERBOSE_MAKEFILE ON)
 set (CMAKE_CXX_STANDARD 11)
 
 add_library(cpp
-            SHARED
-            ../cpp/react-native-lmdb.cpp
-            cpp-adapter.cpp
+        SHARED
+        ../cpp/react-native-lmdb.cpp
+        ../lmdb/libraries/liblmdb/mdb.c
+        ../lmdb/libraries/liblmdb/midl.c
+        cpp-adapter.cpp
 )
 
 # Specifies a path to native header files.
 include_directories(
-            ../cpp
+        ../cpp
+)
+
+include_directories(
+        ../lmdb/libraries/liblmdb
 )

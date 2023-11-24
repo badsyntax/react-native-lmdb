@@ -2,9 +2,24 @@
 
 React Native bindings for LMDB (proof of concept).
 
-This package is in early development and not ready for consumption. Currently it only works on iOS.
+> Lightning Memory-Mapped Database
+
+LMDB is an embedded transactional database in the form of a key-value store.
+
+https://www.symas.com/lmdb
+
+This package is in early development and not ready for consumption.
+
+## Goals of this Project
+
+- Simple API
+- Performance over features
+
+## Benchmarks
 
 Initial benchmarks show good performance:
+
+iOS Simulator:
 
 | Action           | Time     |
 | ---------------- | -------- |
@@ -15,18 +30,16 @@ Initial benchmarks show good performance:
 | get 1000 items   | 4.42ms   |
 | get 10_000 items | 44.25ms  |
 
-## LMDB
+Android Emulator:
 
-> Lightning Memory-Mapped Database
-
-LMDB is an embedded transactional database in the form of a key-value store. It's fast, small, and can handle large amounts of data.
-
-https://www.symas.com/lmdb
-
-## Goals of this Project
-
-- Simple API
-- Performance over features
+| Action           | Time      |
+| ---------------- | --------- |
+| open/create db   | 0.67ms    |
+| put 2 items      | 26.76ms   |
+| put 10_000 items | 4343.95ms |
+| get 2 items      | 0.24ms    |
+| get 1000 items   | 4.42ms    |
+| get 10_000 items | 28.03ms   |
 
 ## Installation
 
@@ -39,15 +52,10 @@ npm install react-native-lmdb
 ```js
 import { open } from 'react-native-lmdb';
 
-const { put, putBatch, get, del } = open('mydb.mdb');
+const { put, get, del } = open('mydb.mdb');
 
 put('key1', 'value1');
 put('key2', 'value2');
-
-putBatch({
-  key3: 'value3',
-  key4: 'value4',
-});
 
 console.log(get('key1'));
 console.log(get('key2'));
@@ -61,12 +69,12 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 
 ## Credits
 
+- Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
 - Thanks to [lmdb++](https://github.com/drycpp/lmdbxx) for the useful c++ wrapper.
-- Thanks to [SwiftLMDB](https://github.com/agisboye/SwiftLMDB) for a good overview of how to use LMDB.
 
 ## License
 
-MIT
+MIT Richard Willis
 
 ---
 

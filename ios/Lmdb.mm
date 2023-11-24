@@ -15,7 +15,7 @@ NSURL *get_db_path(NSString *dbName)
     return dbPath;
 }
 
-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withMapSize:(nonnull NSNumber *)mapSize withErrorCallback:(RCTResponseSenderBlock)callback)
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withMapSize:(nonnull NSNumber *)mapSize)
 {
     NSURL *dbPath = get_db_path(dbName);
 
@@ -25,18 +25,13 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(open:(NSString *)dbName withMapSize:(nonn
                                                attributes:nil
                                                     error:&error];
     if (error != nil) {
-        callback(@[[NSString stringWithFormat:@"error creating directory: %@",error],
-                   [NSNumber numberWithInt:1]]);
-        return nil;
+      // @TODO
     }
 
     try {
         rnlmdb::open([dbPath.path UTF8String], [mapSize longValue]);
-        callback(@[[NSNull null],
-                   [NSNumber numberWithInt:0]]);
     } catch (lmdb::error& error) {
-        callback(@[[NSString stringWithUTF8String: error.what()],
-                   [NSNumber numberWithInt:1]]);
+        // @TODO
     }
 
     return nil;
@@ -48,29 +43,10 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(put:(NSString *)key withValue:(NSString *
     return nil;
 }
 
-RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(putBatch:(NSDictionary *)valueDict)
-{
-    std::unordered_map<std::string, std::string> valueMap;
-    for (id keyId in [valueDict allKeys])
-    {
-        NSString *value = [[valueDict objectForKey: keyId] stringValue];
-        NSString *key = [keyId stringValue];
-        valueMap[[key UTF8String]] = [value UTF8String];
-    }
-    rnlmdb::putBatch(valueMap);
-    return nil;
-}
-
 
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(get:(NSString *)key)
 {
-    auto optionalValue = rnlmdb::get([key UTF8String]);
-    if (optionalValue.has_value()) {
-        auto value = *std::move(optionalValue);
-        return @(value.c_str());
-    } else {
-        return nil;
-    }
+    return @(rnlmdb::get([key UTF8String]).c_str());
 }
 
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(del:(NSString *)key)
