@@ -70,7 +70,7 @@ See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the 
 ## Credits
 
 - Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
-- Thanks to [lmdb++](https://github.com/drycpp/lmdbxx) for the useful c++ wrapper.
+- Thanks to [drycpp/lmdb++](https://github.com/drycpp/lmdbxx) & [hoytech/lmdb++](https://github.com/hoytech/lmdbxx) for the useful c++ wrapper.
 
 ## License
 

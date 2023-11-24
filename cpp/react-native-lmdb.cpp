@@ -1,5 +1,6 @@
 #include "react-native-lmdb.h"
 #include "lmdb++.h"
+#include <string>
 
 namespace rnlmdb {
     lmdb::env env = nullptr;
@@ -13,26 +14,23 @@ namespace rnlmdb {
         env.open(dbPath.c_str(), MDB_CREATE, 0664);
     }
 
-    std::string get(std::string key)
+    std::optional<std::string> get(std::string key)
     {
         auto rtxn = lmdb::txn::begin(env, nullptr, MDB_RDONLY);
         auto dbi = lmdb::dbi::open(rtxn, nullptr);
-        auto keyValue = lmdb::val(key);
-        auto dataValue = lmdb::val();
-        auto rc = ::mdb_get(rtxn, dbi, keyValue, dataValue);
-        rtxn.abort();
-        if (rc != 0) {
-            return nullptr;
-        } else {
-            return dataValue.data();
+
+        std::string_view value;
+        if (dbi.get(rtxn, key, value)) {
+            return std::string{value};
         }
+        return std::nullopt;
     }
 
     void put(std::string key, std::string value)
     {
         auto wtxn = lmdb::txn::begin(env);
         auto dbi = lmdb::dbi::open(wtxn, nullptr);
-        dbi.put(wtxn, key.c_str(), value.c_str());
+        dbi.put(wtxn, key, value);
         wtxn.commit();
     }
 
@@ -40,7 +38,7 @@ namespace rnlmdb {
     {
         auto wtxn = lmdb::txn::begin(env);
         auto dbi = lmdb::dbi::open(wtxn, nullptr);
-        dbi.del(wtxn, lmdb::val(key));
+        dbi.del(wtxn, key);
         wtxn.commit();
     }
 }

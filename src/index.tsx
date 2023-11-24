@@ -23,7 +23,7 @@ export function open(dbName: string, mapSize = defaultMapSize) {
   Lmdb.open(dbName, mapSize);
   return {
     put: (key: string, value: string): void => Lmdb.put(key, value),
-    get: (key: string): string => Lmdb.get(key),
+    get: (key: string): string | null => Lmdb.get(key),
     del: (key: string): void => Lmdb.del(key),
   };
 }

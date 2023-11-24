@@ -9,7 +9,7 @@ namespace rnlmdb {
 
     void open(std::string dbPath, double mapSize);
     void put(std::string key, std::string value);
-    std::string get(std::string key);
+    std::optional<std::string> get(std::string key);
     void del(std::string key);
 }
 

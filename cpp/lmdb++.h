@@ -4,23 +4,22 @@
 #define LMDBXX_H
 
 /**
- * <lmdb++.h> - C++11 wrapper for LMDB.
+ * <lmdb++.h> - C++17 wrapper for LMDB.
  *
  * @author Arto Bendiken <arto@bendiken.net>
- * @see https://sourceforge.net/projects/lmdbxx/
+ * @maintainer Doug Hoyte <doug@hoytech.com>
+ * @see https://github.com/hoytech/lmdbxx
  */
 
 #ifndef __cplusplus
 #error "<lmdb++.h> requires a C++ compiler"
 #endif
 
-#if __cplusplus < 201103L
-#if !defined(_MSC_VER) || _MSC_VER < 1900
-#error "<lmdb++.h> requires a C++11 compiler (CXXFLAGS='-std=c++11')"
-#endif // _MSC_VER check
+#if __cplusplus < 201703L
+#error "<lmdb++.h> requires a C++17 compiler (CXXFLAGS='-std=c++17')"
 #endif
 
-/////////////////**///////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 #include "../lmdb/libraries/liblmdb/lmdb.h"      /* for MDB_*, mdb_*() */
 
@@ -29,10 +28,12 @@
 #endif
 #include <cstddef>     /* for std::size_t */
 #include <cstdio>      /* for std::snprintf() */
-#include <cstring>     /* for std::strlen() */
+#include <cstring>     /* for std::memcpy() */
 #include <stdexcept>   /* for std::runtime_error */
 #include <string>      /* for std::string */
-#include <type_traits> /* for std::is_pod<> */
+#include <string_view> /* for std::string_view */
+#include <limits>      /* for std::numeric_limits<> */
+#include <memory>      /* for std::addressof */
 
 namespace lmdb {
   using mode = mdb_mode_t;
@@ -256,7 +257,7 @@ namespace lmdb {
 #endif
   // TODO: mdb_env_set_assert()
   // TODO: mdb_reader_list()
-  // TODO: mdb_reader_check()
+  static inline void reader_check(MDB_env *env, int *dead);
 }
 
 /**
@@ -516,6 +517,14 @@ lmdb::env_get_userctx(MDB_env* const env) {
   return ::mdb_env_get_userctx(env);
 }
 #endif
+
+static inline void
+lmdb::reader_check(MDB_env *env, int *dead) {
+  const int rc = ::mdb_reader_check(env, dead);
+  if (rc != MDB_SUCCESS) {
+    error::raise("reader_check", rc);
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /* Procedural Interface: Transactions */
@@ -810,7 +819,7 @@ namespace lmdb {
   static inline MDB_txn* cursor_txn(MDB_cursor* cursor) noexcept;
   static inline MDB_dbi cursor_dbi(MDB_cursor* cursor) noexcept;
   static inline bool cursor_get(MDB_cursor* cursor, MDB_val* key, MDB_val* data, MDB_cursor_op op);
-  static inline void cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int flags);
+  static inline bool cursor_put(MDB_cursor* cursor, MDB_val* key, MDB_val* data, unsigned int flags);
   static inline void cursor_del(MDB_cursor* cursor, unsigned int flags);
   static inline void cursor_count(MDB_cursor* cursor, std::size_t& count);
 }
@@ -886,15 +895,16 @@ lmdb::cursor_get(MDB_cursor* const cursor,
  * @throws lmdb::error on failure
  * @see http://symas.com/mdb/doc/group__mdb.html#ga1f83ccb40011837ff37cc32be01ad91e
  */
-static inline void
+static inline bool
 lmdb::cursor_put(MDB_cursor* const cursor,
                  MDB_val* const key,
                  MDB_val* const data,
                  const unsigned int flags = 0) {
   const int rc = ::mdb_cursor_put(cursor, key, data, flags);
-  if (rc != MDB_SUCCESS) {
+  if (rc != MDB_SUCCESS && rc != MDB_KEYEXIST) {
     error::raise("mdb_cursor_put", rc);
   }
+  return (rc == MDB_SUCCESS);
 }
 
 /**
@@ -922,152 +932,6 @@ lmdb::cursor_count(MDB_cursor* const cursor,
     error::raise("mdb_cursor_count", rc);
   }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-/* Resource Interface: Values */
-
-namespace lmdb {
-  class val;
-}
-
-/**
- * Wrapper class for `MDB_val` structures.
- *
- * @note Instances of this class are movable and copyable both.
- * @see http://symas.com/mdb/doc/group__mdb.html#structMDB__val
- */
-class lmdb::val {
-protected:
-  MDB_val _val;
-
-public:
-  /**
-   * Default constructor.
-   */
-  val() noexcept = default;
-
-  /**
-   * Constructor.
-   */
-  val(const std::string& data) noexcept
-    : val{data.data(), data.size()} {}
-
-  /**
-   * Constructor.
-   */
-  val(const char* const data) noexcept
-    : val{data, std::strlen(data)} {}
-
-  /**
-   * Constructor.
-   */
-  val(const void* const data,
-      const std::size_t size) noexcept
-    : _val{size, const_cast<void*>(data)} {}
-
-  /**
-   * Move constructor.
-   */
-  val(val&& other) noexcept = default;
-
-  /**
-   * Move assignment operator.
-   */
-  val& operator=(val&& other) noexcept = default;
-
-  /**
-   * Destructor.
-   */
-  ~val() noexcept = default;
-
-  /**
-   * Returns an `MDB_val*` pointer.
-   */
-  operator MDB_val*() noexcept {
-    return &_val;
-  }
-
-  /**
-   * Returns an `MDB_val*` pointer.
-   */
-  operator const MDB_val*() const noexcept {
-    return &_val;
-  }
-
-  /**
-   * Determines whether this value is empty.
-   */
-  bool empty() const noexcept {
-    return size() == 0;
-  }
-
-  /**
-   * Returns the size of the data.
-   */
-  std::size_t size() const noexcept {
-    return _val.mv_size;
-  }
-
-  /**
-   * Returns a pointer to the data.
-   */
-  template<typename T>
-  T* data() noexcept {
-    return reinterpret_cast<T*>(_val.mv_data);
-  }
-
-  /**
-   * Returns a pointer to the data.
-   */
-  template<typename T>
-  const T* data() const noexcept {
-    return reinterpret_cast<T*>(_val.mv_data);
-  }
-
-  /**
-   * Returns a pointer to the data.
-   */
-  char* data() noexcept {
-    return reinterpret_cast<char*>(_val.mv_data);
-  }
-
-  /**
-   * Returns a pointer to the data.
-   */
-  const char* data() const noexcept {
-    return reinterpret_cast<char*>(_val.mv_data);
-  }
-
-  /**
-   * Assigns the value.
-   */
-  template<typename T>
-  val& assign(const T* const data,
-              const std::size_t size) noexcept {
-    _val.mv_size = size;
-    _val.mv_data = const_cast<void*>(reinterpret_cast<const void*>(data));
-    return *this;
-  }
-
-  /**
-   * Assigns the value.
-   */
-  val& assign(const char* const data) noexcept {
-    return assign(data, std::strlen(data));
-  }
-
-  /**
-   * Assigns the value.
-   */
-  val& assign(const std::string& data) noexcept {
-    return assign(data.data(), data.size());
-  }
-};
-
-#if !(defined(__COVERITY__) || defined(_MSC_VER))
-static_assert(std::is_pod<lmdb::val>::value, "lmdb::val must be a POD type");
-static_assert(sizeof(lmdb::val) == sizeof(MDB_val), "sizeof(lmdb::val) != sizeof(MDB_val)");
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 /* Resource Interface: Environment */
@@ -1183,6 +1047,12 @@ public:
     }
   }
 
+  int reader_check() {
+    int dead;
+    lmdb::reader_check(handle(), &dead);
+    return dead;
+  }
+
   /**
    * Opens this environment.
    *
@@ -1234,6 +1104,29 @@ public:
   env& set_max_dbs(const MDB_dbi count) {
     lmdb::env_set_max_dbs(handle(), count);
     return *this;
+  }
+
+  mdb_filehandle_t get_fd() {
+    mdb_filehandle_t fd;
+    lmdb::env_get_fd(handle(), &fd);
+    return fd;
+  }
+
+  /**
+   * @notice WARNING: This is a function to access LMDB's internal memory map, use at your own risk!
+   */
+  std::string_view get_internal_map() {
+    if constexpr (sizeof(int) != 4 || sizeof(long) != 8 || sizeof(void*) != 8) error::raise("get_internal_map: only LP64 supported", 0);
+
+    // This is a hack that depends on the internal layout of LMDB's MDB_env struct. Hopefully there
+    // will be a better way to get me_map at some point.
+
+    char *me_map = *(char**)(((char*)_handle) + 56);
+
+    MDB_envinfo arg;
+    mdb_env_info(_handle, &arg);
+
+    return std::string_view(me_map, arg.me_mapsize);
   }
 };
 
@@ -1339,8 +1232,9 @@ public:
    * @post `handle() == nullptr`
    */
   void commit() {
-    lmdb::txn_commit(_handle);
+    auto h = _handle;
     _handle = nullptr;
+    lmdb::txn_commit(h);
   }
 
   /**
@@ -1349,8 +1243,9 @@ public:
    * @post `handle() == nullptr`
    */
   void abort() noexcept {
-    lmdb::txn_abort(_handle);
+    auto h = _handle;
     _handle = nullptr;
+    lmdb::txn_abort(h);
   }
 
   /**
@@ -1380,12 +1275,11 @@ namespace lmdb {
 /**
  * Resource class for `MDB_dbi` handles.
  *
- * @note Instances of this class are movable, but not copyable.
  * @see http://symas.com/mdb/doc/group__mdb.html#gadbe68a06c448dfb62da16443d251a78b
  */
 class lmdb::dbi {
 protected:
-  MDB_dbi _handle{0};
+  MDB_dbi _handle{(std::numeric_limits<MDB_dbi>::max)()};
 
 public:
   static constexpr unsigned int default_flags     = 0;
@@ -1395,8 +1289,8 @@ public:
    * Opens a database handle.
    *
    * @param txn the transaction handle
-   * @param name
-   * @param flags
+   * @param name the database name, or nullptr
+   * @param flags dbi flags, ie MDB_CREATE
    * @throws lmdb::error on failure
    */
   static dbi
@@ -1408,6 +1302,31 @@ public:
     return dbi{handle};
   }
 
+  /*
+   * This overload is so that DBI names can be passed in as string_views, which can be
+   * useful when storing the names of DBIs in the database itself. We need to convert it
+   * to a std::string to ensure that it is NUL-byte terminated. This overload comes after
+   * the const char* one above so that in that case there is no std::string overhead.
+   */
+
+  static dbi
+  open(MDB_txn* const txn,
+       std::string_view name,
+       const unsigned int flags = default_flags) {
+    MDB_dbi handle{};
+    std::string nameStr(name);
+    lmdb::dbi_open(txn, nameStr.c_str(), flags, &handle);
+    return dbi{handle};
+  }
+
+  /**
+   * Constructor.
+   *
+   * @note Creates an uninitialized dbi instance. You must move or move-assign a valid dbi instance onto it before you can use it.
+   */
+  dbi() noexcept
+    : _handle{(std::numeric_limits<MDB_dbi>::max)()} {}
+
   /**
    * Constructor.
    *
@@ -1415,23 +1334,6 @@ public:
    */
   dbi(const MDB_dbi handle) noexcept
     : _handle{handle} {}
-
-  /**
-   * Move constructor.
-   */
-  dbi(dbi&& other) noexcept {
-    std::swap(_handle, other._handle);
-  }
-
-  /**
-   * Move assignment operator.
-   */
-  dbi& operator=(dbi&& other) noexcept {
-    if (this != &other) {
-      std::swap(_handle, other._handle);
-    }
-    return *this;
-  }
 
   /**
    * Destructor.
@@ -1521,67 +1423,17 @@ public:
    * @param data
    * @throws lmdb::error on failure
    */
-  bool get(MDB_txn* const txn,
-           const val& key,
-           val& data) {
-    return lmdb::dbi_get(txn, handle(), key, data);
-  }
 
-  /**
-   * Retrieves a key from this database.
-   *
-   * @param txn a transaction handle
-   * @param key
-   * @throws lmdb::error on failure
-   */
-  template<typename K>
   bool get(MDB_txn* const txn,
-           const K& key) const {
-    const lmdb::val k{&key, sizeof(K)};
-    lmdb::val v{};
-    return lmdb::dbi_get(txn, handle(), k, v);
-  }
-
-  /**
-   * Retrieves a key/value pair from this database.
-   *
-   * @param txn a transaction handle
-   * @param key
-   * @param val
-   * @throws lmdb::error on failure
-   */
-  template<typename K, typename V>
-  bool get(MDB_txn* const txn,
-           const K& key,
-           V& val) const {
-    const lmdb::val k{&key, sizeof(K)};
-    lmdb::val v{};
-    const bool result = lmdb::dbi_get(txn, handle(), k, v);
-    if (result) {
-      val = *v.data<const V>();
+           const std::string_view key,
+           std::string_view& data) {
+    const MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    MDB_val dataV{data.size(), const_cast<char*>(data.data())};
+    bool ret = lmdb::dbi_get(txn, handle(), &keyV, &dataV);
+    if (ret) {
+        data = std::string_view(static_cast<char*>(dataV.mv_data), dataV.mv_size);
     }
-    return result;
-  }
-
-  /**
-   * Retrieves a key/value pair from this database.
-   *
-   * @param txn a transaction handle
-   * @param key a NUL-terminated string key
-   * @param val
-   * @throws lmdb::error on failure
-   */
-  template<typename V>
-  bool get(MDB_txn* const txn,
-           const char* const key,
-           V& val) const {
-    const lmdb::val k{key, std::strlen(key)};
-    lmdb::val v{};
-    const bool result = lmdb::dbi_get(txn, handle(), k, v);
-    if (result) {
-      val = *v.data<const V>();
-    }
-    return result;
+    return ret;
   }
 
   /**
@@ -1594,83 +1446,25 @@ public:
    * @throws lmdb::error on failure
    */
   bool put(MDB_txn* const txn,
-           const val& key,
-           val& data,
+           const std::string_view key,
+           std::string_view data,
            const unsigned int flags = default_put_flags) {
-    return lmdb::dbi_put(txn, handle(), key, data, flags);
+    const MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    MDB_val dataV{data.size(), const_cast<char*>(data.data())};
+    return lmdb::dbi_put(txn, handle(), &keyV, &dataV, flags);
   }
 
   /**
-   * Stores a key into this database.
+   * Removes a key from this database.
    *
    * @param txn a transaction handle
    * @param key
-   * @param flags
    * @throws lmdb::error on failure
    */
-  template<typename K>
-  bool put(MDB_txn* const txn,
-           const K& key,
-           const unsigned int flags = default_put_flags) {
-    const lmdb::val k{&key, sizeof(K)};
-    lmdb::val v{};
-    return lmdb::dbi_put(txn, handle(), k, v, flags);
-  }
-
-  /**
-   * Stores a key/value pair into this database.
-   *
-   * @param txn a transaction handle
-   * @param key
-   * @param val
-   * @param flags
-   * @throws lmdb::error on failure
-   */
-  template<typename K, typename V>
-  bool put(MDB_txn* const txn,
-           const K& key,
-           const V& val,
-           const unsigned int flags = default_put_flags) {
-    const lmdb::val k{&key, sizeof(K)};
-    lmdb::val v{&val, sizeof(V)};
-    return lmdb::dbi_put(txn, handle(), k, v, flags);
-  }
-
-  /**
-   * Stores a key/value pair into this database.
-   *
-   * @param txn a transaction handle
-   * @param key a NUL-terminated string key
-   * @param val
-   * @param flags
-   * @throws lmdb::error on failure
-   */
-  template<typename V>
-  bool put(MDB_txn* const txn,
-           const char* const key,
-           const V& val,
-           const unsigned int flags = default_put_flags) {
-    const lmdb::val k{key, std::strlen(key)};
-    lmdb::val v{&val, sizeof(V)};
-    return lmdb::dbi_put(txn, handle(), k, v, flags);
-  }
-
-  /**
-   * Stores a key/value pair into this database.
-   *
-   * @param txn a transaction handle
-   * @param key a NUL-terminated string key
-   * @param val a NUL-terminated string key
-   * @param flags
-   * @throws lmdb::error on failure
-   */
-  bool put(MDB_txn* const txn,
-           const char* const key,
-           const char* const val,
-           const unsigned int flags = default_put_flags) {
-    const lmdb::val k{key, std::strlen(key)};
-    lmdb::val v{val, std::strlen(val)};
-    return lmdb::dbi_put(txn, handle(), k, v, flags);
+  bool del(MDB_txn* const txn,
+           const std::string_view key) {
+    const MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    return lmdb::dbi_del(txn, handle(), &keyV);
   }
 
   /**
@@ -1678,25 +1472,15 @@ public:
    *
    * @param txn a transaction handle
    * @param key
+   * @param val
    * @throws lmdb::error on failure
    */
   bool del(MDB_txn* const txn,
-           const val& key) {
-    return lmdb::dbi_del(txn, handle(), key);
-  }
-
-  /**
-   * Removes a key/value pair from this database.
-   *
-   * @param txn a transaction handle
-   * @param key
-   * @throws lmdb::error on failure
-   */
-  template<typename K>
-  bool del(MDB_txn* const txn,
-           const K& key) {
-    const lmdb::val k{&key, sizeof(K)};
-    return lmdb::dbi_del(txn, handle(), k);
+           const std::string_view key,
+           const std::string_view val) {
+    const MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    const MDB_val valV{val.size(), const_cast<char*>(val.data())};
+    return lmdb::dbi_del(txn, handle(), &keyV, &valV);
   }
 };
 
@@ -1828,85 +1612,120 @@ public:
    * @param op
    * @throws lmdb::error on failure
    */
-  bool get(MDB_val* const key,
+  bool get(std::string_view &key,
            const MDB_cursor_op op) {
-    return get(key, nullptr, op);
-  }
-
-  /**
-   * Retrieves a key from the database.
-   *
-   * @param key
-   * @param op
-   * @throws lmdb::error on failure
-   */
-  bool get(lmdb::val& key,
-           const MDB_cursor_op op) {
-    return get(key, nullptr, op);
-  }
-
-  /**
-   * Retrieves a key/value pair from the database.
-   *
-   * @param key
-   * @param val (may be `nullptr`)
-   * @param op
-   * @throws lmdb::error on failure
-   */
-  bool get(MDB_val* const key,
-           MDB_val* const val,
-           const MDB_cursor_op op) {
-    return lmdb::cursor_get(handle(), key, val, op);
-  }
-
-  /**
-   * Retrieves a key/value pair from the database.
-   *
-   * @param key
-   * @param val
-   * @param op
-   * @throws lmdb::error on failure
-   */
-  bool get(lmdb::val& key,
-           lmdb::val& val,
-           const MDB_cursor_op op) {
-    return lmdb::cursor_get(handle(), key, val, op);
-  }
-
-  /**
-   * Retrieves a key/value pair from the database.
-   *
-   * @param key
-   * @param val
-   * @param op
-   * @throws lmdb::error on failure
-   */
-  bool get(std::string& key,
-           std::string& val,
-           const MDB_cursor_op op) {
-    lmdb::val k{}, v{};
-    const bool found = get(k, v, op);
-    if (found) {
-      key.assign(k.data(), k.size());
-      val.assign(v.data(), v.size());
+    MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    bool ret = lmdb::cursor_get(handle(), &keyV, nullptr, op);
+    if (ret) {
+        key = std::string_view(static_cast<char*>(keyV.mv_data), keyV.mv_size);
     }
-    return found;
+    return ret;
   }
 
   /**
-   * Positions this cursor at the given key.
+   * Retrieves a key/value pair from the database.
    *
    * @param key
+   * @param val
    * @param op
    * @throws lmdb::error on failure
    */
-  template<typename K>
-  bool find(const K& key,
-            const MDB_cursor_op op = MDB_SET) {
-    lmdb::val k{&key, sizeof(K)};
-    return get(k, nullptr, op);
+  bool get(std::string_view &key,
+           std::string_view &val,
+           const MDB_cursor_op op) {
+    MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    MDB_val valV{val.size(), const_cast<char*>(val.data())};
+    bool ret = lmdb::cursor_get(handle(), &keyV, &valV, op);
+    if (ret) {
+        key = std::string_view(static_cast<char*>(keyV.mv_data), keyV.mv_size);
+        val = std::string_view(static_cast<char*>(valV.mv_data), valV.mv_size);
+    }
+    return ret;
+  }
+
+  /**
+   * Stores key/data pairs into the database. The cursor is positioned at the new item, or on failure usually near it.
+   *
+   * See MDB docs for flag values.
+   *
+   * @param key
+   * @param val
+   * @param flags
+   * @throws lmdb::error on failure
+   */
+  bool put(const std::string_view &key,
+           const std::string_view &val,
+           const unsigned int flags = 0) {
+    MDB_val keyV{key.size(), const_cast<char*>(key.data())};
+    MDB_val valV{val.size(), const_cast<char*>(val.data())};
+    return lmdb::cursor_put(handle(), &keyV, &valV, flags);
+  }
+
+  /**
+   * Delete current key/data pair.
+   *
+   * @param flags Options for this operation. Values:
+   *   MDB_NODUPDATA - delete all of the data items for the current key. This flag may only be specified if the database was opened with MDB_DUPSORT.
+   */
+  void del(unsigned int flags = 0) {
+    lmdb::cursor_del(handle(), flags);
+  }
+
+  /**
+   * Return count of duplicates for current key. This call is only valid on databases that support sorted duplicate data items MDB_DUPSORT.
+   */
+  size_t count() {
+    std::size_t countp;
+    lmdb::cursor_count(handle(), countp);
+    return countp;
   }
 };
+
+namespace lmdb {
+  /**
+   * Creates a std::string_view that points to the memory pointed to by v.
+   *
+   * @param v
+   */
+  template<typename T>
+  static inline std::string_view ptr_to_sv(T* v) {
+    return std::string_view(reinterpret_cast<char*>(v), sizeof(*v));
+  }
+
+  /**
+   * Creates a std::string_view that points to the memory occupied by v.
+   *
+   * @param v
+   */
+  template<typename T>
+  static inline std::string_view to_sv(const T &v) {
+    return std::string_view(reinterpret_cast<const char*>(std::addressof(v)), sizeof(v));
+  }
+
+  /**
+   * Takes a std::string_view and casts its pointer as a pointer to the parameterized type.
+   *
+   * @param v
+   */
+  template<typename T>
+  static inline T* ptr_from_sv(std::string_view v) {
+    if (v.size() != sizeof(T)) error::raise("ptr_from_sv", MDB_BAD_VALSIZE);
+    return reinterpret_cast<T*>(const_cast<char*>(v.data()));
+  }
+
+  /**
+   * Takes a std::string_view and dereferences it, returning a value of the parameterized type.
+   *
+   * @param v
+   */
+  template<typename T>
+  static inline T from_sv(std::string_view v) {
+    if (v.size() != sizeof(T)) error::raise("from_sv", MDB_BAD_VALSIZE);
+    T ret;
+    std::memcpy(&ret, const_cast<char*>(v.data()), sizeof(T));
+    return ret;
+  }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
