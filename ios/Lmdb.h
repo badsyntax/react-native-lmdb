@@ -11,4 +11,6 @@
 @interface Lmdb : NSObject <RCTBridgeModule>
 #endif
 
+@property(nonatomic, assign) BOOL setBridgeOnMainQueue;
+
 @end

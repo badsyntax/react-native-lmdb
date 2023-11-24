@@ -6,10 +6,6 @@
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
   "eslint.validate": ["javascript", "typescript"],
-  "eslint.workingDirectories": [
-    { "pattern": "./apps/**" },
-    { "pattern": "./lib/**" }
-  ],
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
@@ -33,5 +29,5 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "cSpell.language": "en-GB",
-  "cSpell.words": ["Lmdb"]
+  "cSpell.words": ["Lmdb", "MMKV"]
 }
