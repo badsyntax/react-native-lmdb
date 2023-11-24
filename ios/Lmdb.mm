@@ -46,7 +46,13 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(put:(NSString *)key withValue:(NSString *
 
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(get:(NSString *)key)
 {
-    return @(rnlmdb::get([key UTF8String]).c_str());
+    auto val = rnlmdb::get([key UTF8String]);
+    if (val.has_value()) {
+        std::string valStr = *std::move(val);
+        return @(valStr.c_str());
+    } else {
+        return nil;
+    }
 }
 
 RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(del:(NSString *)key)

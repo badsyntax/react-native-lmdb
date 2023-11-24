@@ -27,8 +27,12 @@ extern "C"
 JNIEXPORT jstring JNICALL
 Java_com_lmdb_LmdbModule_nativeGet(JNIEnv *env, jclass type, jstring key) {
     std::string keyStr = getString(env, key);
-    std::string result = rnlmdb::get(keyStr);
-    return (env)->NewStringUTF(result.c_str());
+    auto result = rnlmdb::get(keyStr);
+    if (result.has_value()) {
+        return (env)->NewStringUTF(result.value().c_str());
+    } else {
+        return nullptr;
+    }
 }
 
 extern "C"
