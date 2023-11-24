@@ -38,7 +38,7 @@ export default function App() {
     const nowPut = performance.now();
     put('key1', JSON.stringify({ hello: 'world' }));
     put('key2', JSON.stringify({ hello: 'world2' }));
-    results.put10_1000 = performance.now() - nowPut;
+    results.put2 = performance.now() - nowPut;
 
     const nowGet = performance.now();
     // @ts-ignore

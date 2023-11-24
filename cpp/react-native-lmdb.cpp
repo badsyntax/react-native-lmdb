@@ -1,6 +1,7 @@
+#include <string>
+
 #include "react-native-lmdb.h"
 #include "lmdb++.h"
-#include <string>
 
 namespace rnlmdb {
     lmdb::env env = nullptr;

@@ -2,7 +2,6 @@
 #define LMDB_H
 
 #include <string>
-#include <unordered_map>
 #include <optional>
 
 namespace rnlmdb {
