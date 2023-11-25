@@ -13,12 +13,11 @@ import java.nio.file.Paths;
 
 @ReactModule(name = LmdbModule.NAME)
 public class LmdbModule extends ReactContextBaseJavaModule {
+
   public static final String NAME = "Lmdb";
-  private final String documentsDirectoryPath;
 
   public LmdbModule(ReactApplicationContext reactContext) {
     super(reactContext);
-    documentsDirectoryPath = reactContext.getFilesDir().getAbsolutePath();
   }
 
   @Override
@@ -27,36 +26,20 @@ public class LmdbModule extends ReactContextBaseJavaModule {
     return NAME;
   }
 
-  static {
-    System.loadLibrary("cpp");
-  }
-
-  private static native void nativeOpen(String dbPath, double mapSize);
-  private static native void nativePut(String key, String value);
-  private static native String nativeGet(String key);
-  private static native void nativeDel(String key);
+  private static native void nativeInitialize(long jsiPtr, String docDir);
+  private static native void nativeDestruct();
 
   @ReactMethod(isBlockingSynchronousMethod = true)
-  public void open(String dbName, Double mapSize) {
-    File dbPath = new File(documentsDirectoryPath, dbName);
-    if (!dbPath.exists()) {
-      dbPath.mkdirs(); // with intermediate directories
-    }
-    nativeOpen(dbPath.getPath(), mapSize);
+  public void install() {
+      System.loadLibrary("react-native-lmdb"); // as defined in CMakeLists.txt
+      nativeInitialize(
+        this.getReactApplicationContext().getJavaScriptContextHolder().get(),
+        this.getReactApplicationContext().getFilesDir().getAbsolutePath()
+      );
   }
 
-  @ReactMethod(isBlockingSynchronousMethod = true)
-  public void put(String key, String value) {
-    nativePut(key, value);
-  }
-
-  @ReactMethod(isBlockingSynchronousMethod = true)
-  public String get(String key) {
-    return nativeGet(key);
-  }
-
-  @ReactMethod(isBlockingSynchronousMethod = true)
-  public void del(String key) {
-    nativeDel(key);
+  @Override
+  public void onCatalystInstanceDestroy() {
+    nativeDestruct();
   }
 }

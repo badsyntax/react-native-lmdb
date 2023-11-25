@@ -1,50 +1,22 @@
 # react-native-lmdb
 
-React Native bindings for LMDB (proof of concept).
+<div style="overflow:hidden">
+<a href="https://www.symas.com/lmdb"><img alt="LMDB" src="./img/lmdb-logo.png" width="100" align="left" /></a>
 
-> Lightning Memory-Mapped Database
+<div>
 
-LMDB is an embedded transactional database in the form of a key-value store.
+[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster at reading than [MMKV](https://github.com/Tencent/MMKV).
 
-https://www.symas.com/lmdb
+This package embeds & provides React Native bindings for LMDB.
 
-This package is in early development and not ready for consumption.
-
-## Goals of this Project
-
-- Simple API
-- Performance over features
-
-## Benchmarks
-
-Initial benchmarks show good performance:
-
-iOS Simulator:
-
-| Action           | Time     |
-| ---------------- | -------- |
-| open/create db   | 1.62ms   |
-| put 2 items      | 0.91ms   |
-| put 10_000 items | 927.39ms |
-| get 2 items      | 0.035ms  |
-| get 1000 items   | 4.42ms   |
-| get 10_000 items | 44.25ms  |
-
-Android Emulator:
-
-| Action           | Time      |
-| ---------------- | --------- |
-| open/create db   | 0.67ms    |
-| put 2 items      | 26.76ms   |
-| put 10_000 items | 4343.95ms |
-| get 2 items      | 0.24ms    |
-| get 1000 items   | 4.42ms    |
-| get 10_000 items | 28.03ms   |
+</div>
+</div>
 
 ## Installation
 
 ```sh
 npm install react-native-lmdb
+cd ios && pod install
 ```
 
 ## Usage
@@ -52,7 +24,10 @@ npm install react-native-lmdb
 ```js
 import { open } from 'react-native-lmdb';
 
-const { put, get, del } = open('mydb.mdb');
+// Define the largest size of the db (100mb in this case)
+const mapSize = 1024 * 1024 * 100;
+
+const { put, get, del } = open('mydb.mdb', mapSize);
 
 put('key1', 'value1');
 put('key2', 'value2');
@@ -61,20 +36,73 @@ console.log(get('key1'));
 console.log(get('key2'));
 
 del('key1');
+del('key2');
 ```
 
-## Contributing
+## Motivation
 
-See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+MMKV is a great tool but isn't designed for vast amounts of data.
+
+// @TODO: expand
+
+<details>
+<summary>Toggle MMKV related issues</summary>
+
+- https://github.com/Tencent/MMKV/issues/610
+- https://github.com/mrousavy/react-native-mmkv/issues/440
+- https://github.com/mrousavy/react-native-mmkv/issues/397
+- https://github.com/apollographql/apollo-cache-persist/issues/500
+- https://github.com/ammarahm-ed/react-native-mmkv-storage/issues/286
+
+</details>
+
+<br/>
+
+SQLite can handle vast amounts of data but is async thus increases complexity and introduces possible race conditions.
+
+LMDB is mature, synchronous, and can handle anything you throw at it.
+
+## Goals of this Project
+
+- Simple API
+- Performance over features
+
+## Benchmarks
+
+### iOS Simulator:
+
+| Action           | react-native-lmdb | react-native-mmkv |
+| ---------------- | ----------------- | ----------------- |
+| put 10_000 items |                   |                   |
+| get 10_000 items |                   |                   |
+| put 50_000 items |                   |                   |
+| get 50_000 items |                   |                   |
+
+### Android Emulator:
+
+| Action           | react-native-lmdb | react-native-mmkv |
+| ---------------- | ----------------- | ----------------- |
+| put 10_000 items |                   |                   |
+| get 10_000 items |                   |                   |
+| put 50_000 items |                   |                   |
+| get 50_000 items |                   |                   |
 
 ## Credits
 
 - Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
 - Thanks to [drycpp/lmdb++](https://github.com/drycpp/lmdbxx) & [hoytech/lmdb++](https://github.com/hoytech/lmdbxx) for the useful c++ wrapper.
 
+## Donate
+
+If you find LMDB useful please consider supporting the OpenLDAP foundation: https://www.openldap.org/foundation/
+
+## Contributing
+
+See the [contributing guide](CONTRIBUTING.md) to learn how to contribute to the repository and the development workflow.
+
 ## License
 
-MIT Richard Willis
+MIT
 
 ---
 

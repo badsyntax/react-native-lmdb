@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-
 import { StyleSheet, View, Text, Button } from 'react-native';
 import { open } from 'react-native-lmdb';
 
 type RunResults = {
   open?: number;
-  get10_1000?: number;
-  put10_1000?: number;
+  get10_000?: number;
+  put10_000?: number;
   get2?: number;
   put2?: number;
 };
@@ -21,8 +20,11 @@ function getLongString() {
 }
 
 const longString = getLongString();
+const results: RunResults = {};
 
-const { put, get } = open('mydb123.mdb');
+const nowOpen = performance.now();
+const { get, put } = open('mydb123.mdb', 1024 * 1024 * 100);
+results.open = performance.now() - nowOpen;
 
 export default function App() {
   const [memoryLeakStarted, setMemoryLeakStarted] = useState(false);
@@ -31,10 +33,6 @@ export default function App() {
   console.log('not found', get('not found'));
 
   function runBenchmarks() {
-    const results: RunResults = {};
-    const nowOpen = performance.now();
-    results.open = performance.now() - nowOpen;
-
     const nowPut = performance.now();
     put('key1', JSON.stringify({ hello: 'world' }));
     put('key2', JSON.stringify({ hello: 'world2' }));
@@ -51,13 +49,13 @@ export default function App() {
     for (let i = 0; i < 10_000; i++) {
       put(`key${i}`, `value${i}`);
     }
-    results.put10_1000 = performance.now() - nowBatchPut;
+    results.put10_000 = performance.now() - nowBatchPut;
 
     const nowBatchGet = performance.now();
     for (let i = 0; i < 10_000; i++) {
       get(`key${i}`);
     }
-    results.get10_1000 = performance.now() - nowBatchGet;
+    results.get10_000 = performance.now() - nowBatchGet;
 
     setRunResults(results);
   }
@@ -91,8 +89,8 @@ export default function App() {
           <Text>open: {runResults.open}ms</Text>
           <Text>put (2): {runResults.put2}ms</Text>
           <Text>get (2): {runResults.get2}ms</Text>
-          <Text>put (10_000): {runResults.put10_1000}ms</Text>
-          <Text>get (10_000): {runResults.get10_1000}ms</Text>
+          <Text>put (10_000): {runResults.put10_000}ms</Text>
+          <Text>get (10_000): {runResults.get10_000}ms</Text>
         </>
       )}
     </View>
