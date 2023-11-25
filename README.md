@@ -1,8 +1,7 @@
 # react-native-lmdb
 
 <div style="overflow:hidden">
-<a href="https://www.symas.com/lmdb"><img alt="LMDB" src="./img/lmdb-logo.png" width="100" align="left" /></a>
-
+<a href="https://www.symas.com/lmdb"><img alt="LMDB" src="./img/lmdb-logo.png" width="130" align="left" /></a>
 <div>
 
 [LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster at reading than [MMKV](https://github.com/Tencent/MMKV).
@@ -11,6 +10,8 @@ This package embeds & provides React Native bindings for LMDB.
 
 </div>
 </div>
+
+<br clear="left"/>
 
 ## Installation
 
