@@ -1,6 +1,6 @@
 {
   "name": "react-native-lmdb",
-  "version": "0.0.5",
+  "version": "0.0.8",
   "description": "React Native bindings for LMDB",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",

@@ -5,7 +5,7 @@
 
 <div>
 
-[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster at reading than [MMKV](https://github.com/Tencent/MMKV).
+[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is comparable in speed to [MMKV](https://github.com/Tencent/MMKV).
 
 This package embeds & provides React Native bindings for LMDB.
 
@@ -43,24 +43,18 @@ del('key2');
 
 MMKV is a great tool but isn't designed for vast amounts of data.
 
-// @TODO: expand
+When setting and getting 10_000 large strings:
 
-<details>
-<summary>Toggle MMKV related issues</summary>
+| DB   | Empty | Run 1  | Run 2  | Run 3  |
+| ---- | ----- | ------ | ------ | ------ |
+| mmkv | 16kb  | 33.6mb | 67.1mb | 67.1mb |
+| lmdb | 33kb  | 38.3mb | 38.3mb | 38.3mb |
 
-- https://github.com/Tencent/MMKV/issues/610
-- https://github.com/mrousavy/react-native-mmkv/issues/440
-- https://github.com/mrousavy/react-native-mmkv/issues/397
-- https://github.com/apollographql/apollo-cache-persist/issues/500
-- https://github.com/ammarahm-ed/react-native-mmkv-storage/issues/286
-
-</details>
-
-<br/>
+// @TODO - check db sizes on devices
 
 SQLite can handle vast amounts of data but is async thus increases complexity and introduces possible race conditions.
 
-LMDB is mature, synchronous, and can handle anything you throw at it.
+LMDB is mature, synchronous, and can handle anything you throw at it. 💪
 
 ## Goals of this Project
 
@@ -69,23 +63,70 @@ LMDB is mature, synchronous, and can handle anything you throw at it.
 
 ## Benchmarks
 
-### iOS Simulator:
+NOTES: these numbers might not represent current state. I am still in the process of profiling and optimising.
 
-| Action           | react-native-lmdb | react-native-mmkv |
+<table width="100%"><tr><td>
+
+### iOS (Simulator)
+
+|                  | react-native-lmdb | react-native-mmkv |
 | ---------------- | ----------------- | ----------------- |
-| put 10_000 items |                   |                   |
-| get 10_000 items |                   |                   |
-| put 50_000 items |                   |                   |
-| get 50_000 items |                   |                   |
+| put 10_000       | 42038.66ms        | 1815.24ms         |
+| put 10_000 (txn) | 1512.22ms         | n/a               |
+| get 10_000       | 33.74ms           | 57.98ms           |
+| db size run 1    |                   |                   |
+| db size run 2    |                   |                   |
+| db size run 3    |                   |                   |
 
-### Android Emulator:
+</td><td>
 
-| Action           | react-native-lmdb | react-native-mmkv |
+### iOS (iPhone 7)
+
+|                  | react-native-lmdb | react-native-mmkv |
 | ---------------- | ----------------- | ----------------- |
-| put 10_000 items |                   |                   |
-| get 10_000 items |                   |                   |
-| put 50_000 items |                   |                   |
-| get 50_000 items |                   |                   |
+| put 10_000       | 42038.66ms        | 1815.24ms         |
+| put 10_000 (txn) | 1512.22ms         | n/a               |
+| get 10_000       | 33.74ms           | 57.98ms           |
+| db size run 1    |                   |                   |
+| db size run 2    |                   |                   |
+| db size run 3    |                   |                   |
+
+</td></tr></table>
+
+<table width="100%"><tr><td>
+
+### Android (Emulator)
+
+|                  | react-native-lmdb | react-native-mmkv |
+| ---------------- | ----------------- | ----------------- |
+| put 10_000       | 1769.53ms         | 117.94ms          |
+| put 10_000 (txn) | 288.43ms          | n/a               |
+| get 10_000       | 26.74ms           | 16.29ms           |
+| db size run 1    |                   |                   |
+| db size run 2    |                   |                   |
+| db size run 3    |                   |                   |
+
+</td><td>
+
+### Android (Pixel 6a)
+
+|                  | react-native-lmdb | react-native-mmkv |
+| ---------------- | ----------------- | ----------------- |
+| put 10_000       | 1769.53ms         | 117.94ms          |
+| put 10_000 (txn) | 288.43ms          | n/a               |
+| get 10_000       | 26.74ms           | 16.29ms           |
+| db size run 1    |                   |                   |
+| db size run 2    |                   |                   |
+| db size run 3    |                   |                   |
+
+</td></tr></table>
+
+We can conclude:
+
+- mmkv is fast to read
+- mmkv is fast to write
+- lmdb to fast to read
+- lmdb is (potentially very) slow to write depending on device, but can write fast when using a transaction (txn).
 
 ## Credits
 

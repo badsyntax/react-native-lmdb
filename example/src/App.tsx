@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Button } from 'react-native';
-import { open } from 'react-native-lmdb';
+import { open, type BatchValues, init } from 'react-native-lmdb';
 
 type RunResults = {
   open?: number;
   get10_000?: number;
   put10_000?: number;
+  putBatch10_000?: number;
   get2?: number;
   put2?: number;
 };
@@ -22,17 +23,20 @@ function getLongString() {
 const longString = getLongString();
 const results: RunResults = {};
 
+init('mydb4.mdb', 1024 * 1024 * 200);
+
 const nowOpen = performance.now();
-const { get, put } = open('mydb123.mdb', 1024 * 1024 * 100);
+const { get, put, putBatch, drop } = open('subdb');
 results.open = performance.now() - nowOpen;
 
 export default function App() {
   const [memoryLeakStarted, setMemoryLeakStarted] = useState(false);
   const [runResults, setRunResults] = useState<RunResults | undefined>();
 
-  console.log('not found', get('not found'));
+  // console.log('not found', get('not found'));
 
   function runBenchmarks() {
+    console.log('run');
     const nowPut = performance.now();
     put('key1', JSON.stringify({ hello: 'world' }));
     put('key2', JSON.stringify({ hello: 'world2' }));
@@ -40,14 +44,14 @@ export default function App() {
 
     const nowGet = performance.now();
     // @ts-ignore
-    console.log(JSON.stringify(JSON.parse(get('key1'))));
+    console.log(get('key1'));
     // @ts-ignore
-    console.log(JSON.stringify(JSON.parse(get('key2'))));
+    console.log(get('key2'));
     results.get2 = performance.now() - nowGet;
 
     const nowBatchPut = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      put(`key${i}`, `value${i}`);
+      put(`key${i}`, longString);
     }
     results.put10_000 = performance.now() - nowBatchPut;
 
@@ -57,7 +61,20 @@ export default function App() {
     }
     results.get10_000 = performance.now() - nowBatchGet;
 
-    setRunResults(results);
+    // const batchData: BatchValues = [];
+
+    // for (let i = 0; i < 10_000; i++) {
+    //   batchData.push({
+    //     key: `key${i}`,
+    //     value: longString,
+    //   });
+    // }
+
+    // const nowBatchPut2 = performance.now();
+    // putBatch(batchData);
+    // results.putBatch10_000 = performance.now() - nowBatchPut2;
+
+    setRunResults({ ...results });
   }
 
   // Test if we have a memory leak in our native code.
@@ -78,11 +95,17 @@ export default function App() {
     }
     setMemoryLeakStarted(false);
   }
+
+  function dropDb() {
+    drop();
+  }
+
   return (
     <View style={styles.container}>
       <Text>Hello LMDB</Text>
       <Button title="Run Benchmarks" onPress={runBenchmarks} />
       <Button title="Run Memory Leak Test" onPress={runMemoryLeakTest} />
+      <Button title="Drop db" onPress={dropDb} />
       {memoryLeakStarted && <Text>Memory leak test running...</Text>}
       {!!runResults && (
         <>
@@ -90,6 +113,7 @@ export default function App() {
           <Text>put (2): {runResults.put2}ms</Text>
           <Text>get (2): {runResults.get2}ms</Text>
           <Text>put (10_000): {runResults.put10_000}ms</Text>
+          <Text>put batch (10_000): {runResults.putBatch10_000}ms</Text>
           <Text>get (10_000): {runResults.get10_000}ms</Text>
         </>
       )}
