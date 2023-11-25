@@ -1,8 +1,10 @@
 #include <string>
 #include <sstream>
 #include <iostream>
-#include <sys/stat.h>
 
+
+#include <sys/stat.h>
+#include <jsi/jsi.h>
 #include "react-native-lmdb.h"
 #include "lmdb++.h"
 
@@ -11,47 +13,36 @@ using namespace facebook;
 
 namespace rnlmdb {
 
-    bool folder_exists(const std::string &foldername)
+    bool folder_exists(const std::string &folderName)
     {
       struct stat buffer;
-      return (stat(foldername.c_str(), &buffer) == 0);
+      return (stat(folderName.c_str(), &buffer) == 0);
     }
-    /**
-     * Portable wrapper for mkdir. Internally used by mkdir()
-     * @param[in] path the full path of the directory to create.
-     * @return zero on success, otherwise -1.
-     */
+
     int _mkdir(const char *path)
     {
         #if _POSIX_C_SOURCE
             return mkdir(path);
         #else
-            return mkdir(path, 0755); // not sure if this works on mac
+            return mkdir(path, 0755);
         #endif
     }
 
-    /**
-     * Recursive, portable wrapper for mkdir.
-     * @param[in] path the full path of the directory to create.
-     * @return zero on success, otherwise -1.
-     */
-    int mkdir(const char *path)
+    int mkdirs(const char *path)
     {
         std::string current_level = "/";
         std::string level;
         std::stringstream ss(path);
         // First line is empty because it starts with /User
         getline(ss, level, '/');
-        // split path using slash as a separator
         while (getline(ss, level, '/'))
         {
-            current_level += level; // append folder to the current level
-                                // create current level
+            current_level += level;
             if (!folder_exists(current_level) && _mkdir(current_level.c_str()) != 0) {
                 return -1;
             }
 
-            current_level += "/"; // don't forget to append a slash
+            current_level += "/";
         }
 
         return 0;
@@ -60,7 +51,8 @@ namespace rnlmdb {
     lmdb::env env = nullptr;
     std::string docPathStr;
 
-    void install(jsi::Runtime& jsiRuntime, const char *docPath) {
+    void install(jsi::Runtime &jsiRuntime, const char *docPath)
+    {
         docPathStr = std::string(docPath);
 
         auto open = jsi::Function::createFromHostFunction(
@@ -68,17 +60,17 @@ namespace rnlmdb {
             jsi::PropNameID::forAscii(jsiRuntime, "open"),
             2, // Number of arguments in function
             [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-              
+
                 if(!args[0].isString() || !args[1].isNumber()) {
                   throw jsi::JSError(runtime, "Invalid arguments");
                 }
-              
+
                 auto dbName = args[0].asString(runtime).utf8(runtime);
                 auto mapSize = args[1].asNumber();
-                
+
                 std::string fullDocPathStr = docPathStr + "/" + dbName;
-                mkdir(fullDocPathStr.c_str());
-                
+                mkdirs(fullDocPathStr.c_str());
+
                 if (env != nullptr) {
                   env.close();
                 }
@@ -89,20 +81,20 @@ namespace rnlmdb {
                 return jsi::Value();
             }
         );
-        
+
         auto put = jsi::Function::createFromHostFunction(
             jsiRuntime,
             jsi::PropNameID::forAscii(jsiRuntime, "put"),
             2, // Number of arguments in function
             [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-              
+
                 if(!args[0].isString() || !args[1].isString()) {
                   throw jsi::JSError(runtime, "Invalid arguments");
                 }
-              
+
                 auto key = args[0].asString(runtime).utf8(runtime);
                 auto value = args[1].asString(runtime).utf8(runtime);
-                
+
                 auto wtxn = lmdb::txn::begin(env);
                 auto dbi = lmdb::dbi::open(wtxn, nullptr);
                 dbi.put(wtxn, key, value);
@@ -163,8 +155,8 @@ namespace rnlmdb {
         jsiRuntime.global().setProperty(jsiRuntime, "del", std::move(del));
     }
 
-    void cleanUp() {
-        // intentionally left blank
+    void cleanUp()
+    {
     }
 
 }

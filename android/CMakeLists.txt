@@ -30,14 +30,8 @@ set_target_properties(
 )
 
 find_package(ReactAndroid REQUIRED CONFIG)
-#find_package(fbjni REQUIRED CONFIG)
+find_package(fbjni REQUIRED CONFIG)
 find_library(log-lib log)
-
-if(${USE_HERMES})
- set(JSEXECUTOR_LIB ReactAndroid::hermes_executor)
-else()
- set(JSEXECUTOR_LIB ReactAndroid::jscexecutor)
-endif()
 
 target_link_libraries(
         ${PACKAGE_NAME}

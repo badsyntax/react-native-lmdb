@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
-import { NativeModules } from 'react-native';
-
-console.log('NativeModules', NativeModules.LMDB);
 import { StyleSheet, View, Text, Button } from 'react-native';
 import { open } from 'react-native-lmdb';
 
 type RunResults = {
   open?: number;
-  get10_1000?: number;
-  put10_1000?: number;
+  get10_000?: number;
+  put10_000?: number;
   get2?: number;
   put2?: number;
 };
@@ -29,10 +26,7 @@ const nowOpen = performance.now();
 const { get, put } = open('mydb123.mdb', 1024 * 1024 * 100);
 results.open = performance.now() - nowOpen;
 
-// console.log('results', JSON.stringify(results));
-
 export default function App() {
-  // return null;
   const [memoryLeakStarted, setMemoryLeakStarted] = useState(false);
   const [runResults, setRunResults] = useState<RunResults | undefined>();
 
@@ -52,16 +46,16 @@ export default function App() {
     results.get2 = performance.now() - nowGet;
 
     const nowBatchPut = performance.now();
-    for (let i = 0; i < 50_000; i++) {
+    for (let i = 0; i < 10_000; i++) {
       put(`key${i}`, `value${i}`);
     }
-    results.put10_1000 = performance.now() - nowBatchPut;
+    results.put10_000 = performance.now() - nowBatchPut;
 
     const nowBatchGet = performance.now();
-    for (let i = 0; i < 50_000; i++) {
+    for (let i = 0; i < 10_000; i++) {
       get(`key${i}`);
     }
-    results.get10_1000 = performance.now() - nowBatchGet;
+    results.get10_000 = performance.now() - nowBatchGet;
 
     setRunResults(results);
   }
@@ -95,8 +89,8 @@ export default function App() {
           <Text>open: {runResults.open}ms</Text>
           <Text>put (2): {runResults.put2}ms</Text>
           <Text>get (2): {runResults.get2}ms</Text>
-          <Text>put (50_000): {runResults.put10_1000}ms</Text>
-          <Text>get (50_000): {runResults.get10_1000}ms</Text>
+          <Text>put (10_000): {runResults.put10_000}ms</Text>
+          <Text>get (10_000): {runResults.get10_000}ms</Text>
         </>
       )}
     </View>

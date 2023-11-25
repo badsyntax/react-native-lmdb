@@ -22,11 +22,15 @@ RCT_EXPORT_MODULE(Lmdb)
     if (!cxxBridge.runtime) {
         return;
     }
+}
 
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(install) {
     NSURL *documentsPath = [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory
                                                                    inDomains:NSUserDomainMask] lastObject];
 
+    RCTCxxBridge *cxxBridge = (RCTCxxBridge *)self.bridge;
     rnlmdb::install(*(facebook::jsi::Runtime *)cxxBridge.runtime, [documentsPath.path UTF8String]);
+    return nil;
 }
 
 - (void)invalidate {

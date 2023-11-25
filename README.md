@@ -5,7 +5,7 @@
 
 <div>
 
-[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster than [MMKV](https://github.com/Tencent/MMKV).
+[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster at reading than [MMKV](https://github.com/Tencent/MMKV).
 
 This package embeds & provides React Native bindings for LMDB.
 
@@ -43,6 +43,8 @@ del('key2');
 
 MMKV is a great tool but isn't designed for vast amounts of data.
 
+// @TODO: expand
+
 <details>
 <summary>Toggle MMKV related issues</summary>
 
@@ -67,21 +69,30 @@ LMDB is mature, synchronous, and can handle anything you throw at it.
 
 ## Benchmarks
 
-iOS Simulator:
+### iOS Simulator:
 
 | Action           | react-native-lmdb | react-native-mmkv |
 | ---------------- | ----------------- | ----------------- |
-| put 10_000 items | 927.39ms          |                   |
-| get 10_000 items | 44.25ms           |                   |
-| put 50_000 items | 927.39ms          |                   |
-| get 50_000 items | 44.25ms           |                   |
+| put 10_000 items |                   |                   |
+| get 10_000 items |                   |                   |
+| put 50_000 items |                   |                   |
+| get 50_000 items |                   |                   |
+
+### Android Emulator:
+
+| Action           | react-native-lmdb | react-native-mmkv |
+| ---------------- | ----------------- | ----------------- |
+| put 10_000 items |                   |                   |
+| get 10_000 items |                   |                   |
+| put 50_000 items |                   |                   |
+| get 50_000 items |                   |                   |
 
 ## Credits
 
 - Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
 - Thanks to [drycpp/lmdb++](https://github.com/drycpp/lmdbxx) & [hoytech/lmdb++](https://github.com/hoytech/lmdbxx) for the useful c++ wrapper.
 
-## Sponsoring
+## Donate
 
 If you find LMDB useful please consider supporting the OpenLDAP foundation: https://www.openldap.org/foundation/
 
