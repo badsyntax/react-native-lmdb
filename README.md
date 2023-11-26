@@ -5,9 +5,11 @@
 
 <div>
 
-[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is comparable in speed to [MMKV](https://github.com/Tencent/MMKV).
+[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store.
 
 This package embeds & provides React Native bindings for LMDB.
+
+NOTE: Under development, not ready for consumption yet!
 
 </div>
 </div>
@@ -39,6 +41,37 @@ del('key1');
 del('key2');
 ```
 
+## Optimisation
+
+LMDB uses transactions for read/write ops. By default a new transaction is created for each op and this introduces overhead. Batch ops must always used a shared transaction to improve perf.
+
+Write lots of data in a single transaction:
+
+```ts
+const wtxn = transaction(TRANSACTION_WRITE);
+wtxn.begin();
+put('some', 'data', wtxn);
+put('other', 'data', wtxn);
+// ...
+wtxn.commit(); // write the data to the db
+```
+
+For reading data, you can use a global read transaction, then reset it to sync with the db.
+
+```ts
+// Make this global, and adjust all get() calls to use this transaction
+const rtxn = transaction();
+
+const value1 = get('key1', rtxn);
+const value2 = get('key2', rtxn);
+
+// Elsewhere in your app, after making changes to your db...
+put('key1', 'new data');
+rtx.reset(); // this allow subsequent get() calls to use the latest db snapshot
+
+const value1New = get('key1', rtxn);
+```
+
 ## Motivation
 
 MMKV is a great tool but isn't designed for vast amounts of data.
@@ -61,6 +94,11 @@ LMDB is mature, synchronous, and can handle anything you throw at it. 💪
 - Simple API
 - Performance over features
 
+## FAQ
+
+Q: Does LMDB store everything in memory?
+A:
+
 ## Benchmarks
 
 NOTES: these numbers might not represent current state. I am still in the process of profiling and optimising.
@@ -69,24 +107,23 @@ NOTES: these numbers might not represent current state. I am still in the proces
 
 ### iOS (Simulator)
 
-|                  | react-native-lmdb | react-native-mmkv |
-| ---------------- | ----------------- | ----------------- |
-| put 10_000       | 42038.66ms        | 1815.24ms         |
-| put 10_000 (txn) | 1512.22ms         | n/a               |
-| get 10_000       | 33.74ms           | 57.98ms           |
-| db size run 1    |                   |                   |
-| db size run 2    |                   |                   |
-| db size run 3    |                   |                   |
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
 
 </td><td>
 
 ### iOS (iPhone 7)
 
-|                  | react-native-lmdb | react-native-mmkv |
+|                  | react-native-mmkv | react-native-lmdb |
 | ---------------- | ----------------- | ----------------- |
-| put 10_000       | 42038.66ms        | 1815.24ms         |
-| put 10_000 (txn) | 1512.22ms         | n/a               |
-| get 10_000       | 33.74ms           | 57.98ms           |
+| put 10_000       |                   |                   |
+| put 10_000 (txn) |                   |                   |
+| get 10_000       |                   |                   |
 | db size run 1    |                   |                   |
 | db size run 2    |                   |                   |
 | db size run 3    |                   |                   |
@@ -97,27 +134,25 @@ NOTES: these numbers might not represent current state. I am still in the proces
 
 ### Android (Emulator)
 
-|                  | react-native-lmdb | react-native-mmkv |
-| ---------------- | ----------------- | ----------------- |
-| put 10_000       | 1769.53ms         | 117.94ms          |
-| put 10_000 (txn) | 288.43ms          | n/a               |
-| get 10_000       | 26.74ms           | 16.29ms           |
-| db size run 1    |                   |                   |
-| db size run 2    |                   |                   |
-| db size run 3    |                   |                   |
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
 
 </td><td>
 
 ### Android (Pixel 6a)
 
-|                  | react-native-lmdb | react-native-mmkv |
-| ---------------- | ----------------- | ----------------- |
-| put 10_000       | 1769.53ms         | 117.94ms          |
-| put 10_000 (txn) | 288.43ms          | n/a               |
-| get 10_000       | 26.74ms           | 16.29ms           |
-| db size run 1    |                   |                   |
-| db size run 2    |                   |                   |
-| db size run 3    |                   |                   |
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
 
 </td></tr></table>
 
@@ -148,3 +183,7 @@ MIT
 ---
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+```
+
+```

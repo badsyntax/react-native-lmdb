@@ -4628,7 +4628,12 @@ react-native-builder-bob@^0.20.0:
     react "18.2.0"
     react-native "0.72.7"
 
-react-native@*, react-native@0.72.7:
+react-native-mmkv@^2.11.0:
+  version "2.11.0"
+  resolved "https://registry.npmjs.org/react-native-mmkv/-/react-native-mmkv-2.11.0.tgz"
+  integrity sha512-28PdUHjZJmAw3q+8zJDAAdohnZMpDC7WgRUJxACOMkcmJeqS3u5cKS/lSq2bhf1CvaeIiHYHUWiyatUjMRCDQQ==
+
+react-native@*, react-native@>=0.71.0, react-native@0.72.7:
   version "0.72.7"
   dependencies:
     "@jest/create-cache-key-function" "^29.2.1"
@@ -4677,7 +4682,7 @@ react-shallow-renderer@^16.15.0:
     object-assign "^4.1.1"
     react-is "^16.12.0 || ^17.0.0 || ^18.0.0"
 
-"react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", react@18.2.0:
+react@*, "react@^16.0.0 || ^17.0.0 || ^18.0.0", "react@^16.8.0 || ^17.0.0 || ^18.0.0", react@18.2.0:
   version "18.2.0"
   dependencies:
     loose-envify "^1.1.0"
