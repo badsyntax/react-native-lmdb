@@ -29,5 +29,5 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "cSpell.language": "en-GB",
-  "cSpell.words": ["Lmdb", "MMKV", "tidx"]
+  "cSpell.words": ["Lmdb", "MMKV", "rtxn", "tidx", "wtxn"]
 }

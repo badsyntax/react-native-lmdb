@@ -13,8 +13,10 @@ declare function put(
   value: string,
   tidx: number
 ): void;
-declare function drop(): void;
-declare function beginTransaction(): number;
+declare function beginTransaction(
+  write?: boolean | null,
+  tidx?: number
+): number;
 declare function resetTransaction(tidx: number): void;
 declare function commitTransaction(tidx: number): void;
 
@@ -32,7 +34,6 @@ function _open(subDbName: string) {
     put: (key: string, value: string, tidx: number) =>
       put(dbi, key, value, tidx),
     del: (key: string) => del(dbi, key),
-    drop,
     resetTransaction,
     beginTransaction,
     commitTransaction,

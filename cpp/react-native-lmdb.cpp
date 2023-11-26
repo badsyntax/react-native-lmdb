@@ -1,10 +1,7 @@
-#include <dirent.h>
-#include <jsi/jsi.h>
-#include <sstream>
-#include <string>
-#include <sys/stat.h>
-
 #include "react-native-lmdb.h"
+#include "util.hpp"
+#include <jsi/jsi.h>
+#include <string>
 
 using namespace facebook;
 
@@ -16,52 +13,6 @@ std::vector<MDB_txn*> txns;
 
 MDB_env* env = nullptr;
 MDB_txn* rtxn = nullptr;
-
-bool folder_exists(const std::string& folderName) {
-  struct stat buffer;
-  return (stat(folderName.c_str(), &buffer) == 0);
-}
-
-int _mkdir(const char* path) {
-#if _POSIX_C_SOURCE
-  return mkdir(path);
-#else
-  return mkdir(path, 0755);
-#endif
-}
-
-int mkdirs(const char* path) {
-  std::string current_level = "/";
-  std::string level;
-  std::stringstream ss(path);
-  // First line is empty because it starts with /User
-  getline(ss, level, '/');
-  while (getline(ss, level, '/')) {
-    current_level += level;
-    if (!folder_exists(current_level) && _mkdir(current_level.c_str()) != 0) {
-      return -1;
-    }
-    current_level += "/";
-  }
-
-  return 0;
-}
-
-bool cleanDirectory(const std::string& path) {
-  struct dirent* ent;
-  auto* dir = opendir(path.c_str());
-  if (dir != NULL) {
-    /* remove all the files and directories within directory */
-    while ((ent = readdir(dir)) != NULL) {
-      std::remove((path + ent->d_name).c_str());
-    }
-    closedir(dir);
-  } else {
-    /* could not open directory */
-    return false;
-  }
-  return true;
-}
 
 void install(jsi::Runtime& jsiRuntime, const char* docPath) {
   docPathStr = std::string(docPath);
@@ -82,11 +33,24 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
         mkdirs(fullDocPathStr.c_str());
 
         int rc = mdb_env_create(&env);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to create env");
+        }
         rc = mdb_env_set_mapsize(env, (long)mapSize);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to set map size");
+        }
+        // @TODO
         rc = mdb_env_set_maxdbs(env, 50);
-        rc = mdb_env_open(env, fullDocPathStr.c_str(), MDB_WRITEMAP, 0644);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to set max dbs");
+        }
+        rc = mdb_env_open(env, fullDocPathStr.c_str(), 0, 0644);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to open env");
+        }
 
-        return jsi::Value(nullptr);
+        return nullptr;
       });
 
   auto open = jsi::Function::createFromHostFunction(
@@ -101,9 +65,18 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
         auto dbName = args[0].asString(runtime).utf8(runtime);
 
         MDB_dbi dbi;
-        mdb_txn_begin(env, nullptr, 0, &rtxn);
-        mdb_dbi_open(rtxn, dbName.c_str(), MDB_CREATE, &dbi);
-        mdb_txn_commit(rtxn);
+        int rc = ::mdb_txn_begin(env, nullptr, 0, &rtxn);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to begin transaction");
+        }
+        rc = ::mdb_dbi_open(rtxn, dbName.c_str(), MDB_CREATE, &dbi);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to open dbi");
+        }
+        rc = ::mdb_txn_commit(rtxn);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to commit transaction");
+        }
 
         dbs.push_back({dbi});
         int idx = (int)dbs.size() - 1;
@@ -113,11 +86,19 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
 
   auto beginTransaction = jsi::Function::createFromHostFunction(
       jsiRuntime, jsi::PropNameID::forAscii(jsiRuntime, "beginTransaction"),
-      0, // Number of arguments in function
+      1, // Number of arguments in function
       [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args,
          size_t count) -> jsi::Value {
+        if (count == 1 && !args[0].isBool()) {
+          throw jsi::JSError(runtime, "Invalid arguments");
+        }
+
+        auto write = count == 1 ? args[0].asBool() : false;
         MDB_txn* txn;
-        mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
+        int rc = ::mdb_txn_begin(env, nullptr, write ? 0 : MDB_RDONLY, &txn);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to begin transaction");
+        }
         txns.push_back({txn});
         int idx = (int)txns.size() - 1;
         return jsi::Value(idx);
@@ -134,8 +115,7 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
 
         auto idx = args[0].asNumber();
         auto txn = txns[idx];
-        mdb_txn_reset(txn);
-
+        ::mdb_txn_reset(txn);
         return nullptr;
       });
 
@@ -150,7 +130,10 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
 
         auto idx = args[0].asNumber();
         auto txn = txns[idx];
-        mdb_txn_commit(txn);
+        int rc = ::mdb_txn_commit(txn);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to commit transaction");
+        }
         return nullptr;
       });
 
@@ -175,7 +158,11 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
         MDB_val keyV{key.size(), key.data()};
         MDB_val dataV{data.size(), data.data()};
 
-        mdb_put(txn, dbi, &keyV, &dataV, 0);
+        int rc = ::mdb_put(txn, dbi, &keyV, &dataV, 0);
+
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to put value");
+        }
 
         return jsi::Value(nullptr);
       });
@@ -227,8 +214,14 @@ void install(jsi::Runtime& jsiRuntime, const char* docPath) {
 
         MDB_txn* txn = nullptr;
         MDB_val keyV{key.size(), key.data()};
-        mdb_del(txn, dbi, &keyV, nullptr);
-        mdb_txn_commit(txn);
+        int rc = ::mdb_del(txn, dbi, &keyV, nullptr);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to del");
+        }
+        rc = ::mdb_txn_commit(txn);
+        if (rc != MDB_SUCCESS) {
+          throw jsi::JSError(runtime, "Unable to commit transaction");
+        }
 
         return jsi::Value(nullptr);
       });

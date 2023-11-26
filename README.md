@@ -49,7 +49,7 @@ LMDB uses transactions for read/write ops. Batch ops should use a shared transac
 Write lots of data in a single transaction:
 
 ```ts
-const tidx = beginTransaction();
+const tidx = beginTransaction(true);
 put('some', 'data', tidx);
 put('other', 'data', tidx);
 // ...

@@ -33,7 +33,7 @@
     "example": "yarn workspace react-native-lmdb-example",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "clang-format": "clang-format -i cpp/**/*.cpp cpp/**/*.h",
+    "clang-format": "clang-format -i cpp/**/*.cpp cpp/**/*.h cpp/**/*.hpp",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
