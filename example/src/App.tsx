@@ -10,7 +10,6 @@ type RunResults = {
   open?: number;
   get10_000?: number;
   put10_000?: number;
-  putBatch10_000?: number;
   get2?: number;
   put2?: number;
 };
@@ -38,7 +37,6 @@ const nowOpen = performance.now();
 const {
   get,
   put,
-  // putBatch,
   drop,
   beginTransaction,
   commitTransaction,
@@ -64,11 +62,13 @@ export default function App() {
     // console.log(get('key2'));
     // results.lmdb.get2 = performance.now() - nowGet;
 
+    const wtxn = beginTransaction();
     const nowBatchPut = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      put(`key${i}`, longString);
+      put(`key${i}`, longString, wtxn);
     }
     results.lmdb.put10_000 = performance.now() - nowBatchPut;
+    commitTransaction(wtxn);
 
     const nowBatchPutMmkv = performance.now();
     for (let i = 0; i < 10_000; i++) {
@@ -91,19 +91,6 @@ export default function App() {
     }
     results.lmdb.get10_000 = performance.now() - nowBatchGet;
     commitTransaction(rtxn);
-
-    // const batchData: BatchValues = [];
-
-    // for (let i = 0; i < 10_000; i++) {
-    //   batchData.push({
-    //     key: `key${i}`,
-    //     value: longString,
-    //   });
-    // }
-
-    // const nowBatchPut2 = performance.now();
-    // putBatch(batchData);
-    // results.putBatch10_000 = performance.now() - nowBatchPut2;
 
     setRunResults({ ...results });
   }
@@ -144,9 +131,6 @@ export default function App() {
           <Text>put (2): {runResults.lmdb.put2}ms</Text>
           <Text>get (2): {runResults.lmdb.get2}ms</Text>
           <Text>lmdb put (10_000): {runResults.lmdb.put10_000}ms</Text>
-          <Text>
-            lmdb put batch (10_000): {runResults.lmdb.putBatch10_000}ms
-          </Text>
           <Text>lmdb get (10_000): {runResults.lmdb.get10_000}ms</Text>
           <Text>mmkv put (10_000): {runResults.mmkv.put10_000}ms</Text>
           <Text>mmkv get (10_000): {runResults.mmkv.get10_000}ms</Text>

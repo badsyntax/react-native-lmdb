@@ -7,7 +7,11 @@ This project is a monorepo managed using [Yarn workspaces](https://yarnpkg.com/f
 - The library package in the root directory.
 - An example app in the `example/` directory.
 
-To get started with the project, run `yarn` in the root directory to install the required dependencies for each package:
+To get started with the project:
+
+- `git submodule update --init --recursive`
+- install `clang-format` (eg `brew install clang-format`)
+- run `yarn` in the root directory to install the required dependencies for each package:
 
 ```sh
 yarn
@@ -67,8 +71,6 @@ yarn test
 [ESLint](https://eslint.org/), [Prettier](https://prettier.io/), [TypeScript](https://www.typescriptlang.org/)
 
 We use [TypeScript](https://www.typescriptlang.org/) for type checking, [ESLint](https://eslint.org/) with [Prettier](https://prettier.io/) for linting and formatting the code, and [Jest](https://jestjs.io/) for testing.
-
-Our pre-commit hooks verify that the linter and tests pass when committing.
 
 ### Scripts
 
