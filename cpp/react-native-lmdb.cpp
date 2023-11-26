@@ -5,7 +5,6 @@
 #include <dirent.h>
 
 #include "react-native-lmdb.h"
-#include "lmdb++.h"
 
 using namespace facebook;
 

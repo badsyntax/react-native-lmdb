@@ -1,7 +1,6 @@
 #import <React/RCTBridge+Private.h>
 #import <React/RCTUtils.h>
 #import "Lmdb.h"
-#import "lmdb++.h"
 
 @implementation Lmdb
 

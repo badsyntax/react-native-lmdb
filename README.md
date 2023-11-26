@@ -43,7 +43,7 @@ del('key2');
 
 ## Optimisation
 
-LMDB uses transactions for read/write ops. Batch ops must always used a shared transaction to improve perf.
+LMDB uses transactions for read/write ops. Batch ops should use a shared transaction to improve perf.
 
 Write lots of data in a single transaction:
 
@@ -75,15 +75,6 @@ const value1New = get('key1', tidx);
 
 MMKV is a great tool but isn't designed for vast amounts of data.
 
-When setting and getting 10_000 large strings:
-
-| DB   | Empty | Run 1  | Run 2  | Run 3  |
-| ---- | ----- | ------ | ------ | ------ |
-| mmkv | 16kb  | 33.6mb | 67.1mb | 67.1mb |
-| lmdb | 33kb  | 38.3mb | 38.3mb | 38.3mb |
-
-// @TODO - check db sizes on devices
-
 SQLite can handle vast amounts of data but is async thus increases complexity and introduces possible race conditions.
 
 LMDB is mature, synchronous, and can handle anything you throw at it. 💪
@@ -93,16 +84,11 @@ LMDB is mature, synchronous, and can handle anything you throw at it. 💪
 - Simple API
 - Performance over features
 
-## FAQ
-
-Q: Does LMDB store everything in memory?
-A:
-
 ## Benchmarks
 
-NOTES: these numbers might not represent current state. I am still in the process of profiling and optimising.
+I am still in the process of profiling and optimising.
 
-<table width="100%"><tr><td>
+<!-- <table width="100%"><tr><td>
 
 ### iOS (Simulator)
 
@@ -157,15 +143,11 @@ NOTES: these numbers might not represent current state. I am still in the proces
 
 We can conclude:
 
-- mmkv is fast to read
-- mmkv is fast to write
-- lmdb to fast to read
-- lmdb is (potentially very) slow to write depending on device, but can write fast when using a transaction (txn).
+// @TODO -->
 
 ## Credits
 
 - Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
-- Thanks to [drycpp/lmdb++](https://github.com/drycpp/lmdbxx) & [hoytech/lmdb++](https://github.com/hoytech/lmdbxx) for the useful c++ wrapper.
 
 ## Donate
 
