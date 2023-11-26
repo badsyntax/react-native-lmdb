@@ -15,7 +15,7 @@ namespace rnlmdb {
     std::string docPathStr;
     std::vector<MDB_dbi> dbs;
     std::vector<MDB_txn*> txns;
-    MDB_dbi db;
+//    MDB_dbi db;
     MDB_txn* rtxn = nullptr;
 
     bool folder_exists(const std::string &folderName)
@@ -121,46 +121,24 @@ namespace rnlmdb {
                 mdb_txn_begin(env, nullptr, 0, &rtxn);
                 mdb_dbi_open(rtxn, dbName.c_str(), MDB_CREATE, &dbi);
                 mdb_txn_commit(rtxn);
-                dbs.push_back(dbi);
+                
+                dbs.push_back({dbi});
                 int idx = (int)dbs.size() - 1;
-                db = dbi;
                 
                 return jsi::Value(idx);
-            }
-        );
-        
-        auto transaction = jsi::Function::createFromHostFunction(
-            jsiRuntime,
-            jsi::PropNameID::forAscii(jsiRuntime, "transaction"),
-            0, // Number of arguments in function
-            [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-                
-//                MDB_txn* txn;
-//                txns.push_back({txn});
-//                int idx = (int)dbs.size() - 1;
-                mdb_txn_begin(env, nullptr, MDB_RDONLY, &rtxn);
-//                mdb_txn_reset(rtxn);
-//                mdb_txn_renew(rtxn);
-                return jsi::Value(nullptr);
             }
         );
         
         auto beginTransaction = jsi::Function::createFromHostFunction(
             jsiRuntime,
             jsi::PropNameID::forAscii(jsiRuntime, "beginTransaction"),
-            1, // Number of arguments in function
+            0, // Number of arguments in function
             [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-                
-                if(!args[0].isNumber())
-                {
-                  throw jsi::JSError(runtime, "Invalid arguments");
-                }
-
-                auto idx = args[0].asNumber();
-                auto txn = txns[idx];
-                
-                mdb_txn_begin(env, nullptr, 0, &txn);
-                return nullptr;
+                MDB_txn* txn;
+                mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
+                txns.push_back({txn});
+                int idx = (int)txns.size() - 1;
+                return jsi::Value(idx);
             }
         );
         
@@ -212,12 +190,12 @@ namespace rnlmdb {
                   throw jsi::JSError(runtime, "Invalid arguments");
                 }
                 
-//                auto dbiKey = args[0].asNumber();
+                auto dbiIdx = args[0].asNumber();
                 auto key = args[1].asString(runtime).utf8(runtime);
                 auto data = args[2].asString(runtime).utf8(runtime);
               
-//                auto dbi = dbs[dbiKey];
-                auto dbi = db;
+                auto dbi = dbs[dbiIdx];
+//                auto dbi = db;
                 
                 MDB_txn* txn = nullptr;
                 mdb_txn_begin(env, nullptr, 0, &txn);
@@ -255,7 +233,7 @@ namespace rnlmdb {
                 auto batchArrLength = batchArr.getProperty(runtime, "length").asNumber();
                 
 //                auto dbi = dbs[dbiKey];
-                auto dbi = db;
+//                auto dbi = db;
                 
                 MDB_txn* txn = nullptr;
                 mdb_txn_begin(env, nullptr, 0, &txn);
@@ -283,7 +261,7 @@ namespace rnlmdb {
                     auto valueStr = value.asString(runtime).utf8(runtime);
                     MDB_val keyV{keyStr.size(), keyStr.data()};
                     MDB_val dataV{valueStr.size(), valueStr.data()};
-                    mdb_put(txn, dbi, &keyV, &dataV, 0);
+//                    mdb_put(txn, dbi, &keyV, &dataV, 0);
                 }
                 
                 mdb_txn_commit(txn);
@@ -291,23 +269,28 @@ namespace rnlmdb {
                 return jsi::Value(nullptr);
             }
         );
+        
         auto get = jsi::Function::createFromHostFunction(
             jsiRuntime,
             jsi::PropNameID::forAscii(jsiRuntime, "get"),
-            2, // Number of arguments in function
+            3, // Number of arguments in function
             [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
 
-                if(!args[0].isString())
+                if(!args[0].isNumber() || !args[1].isString() || !args[2].isNumber())
                 {
                   throw jsi::JSError(runtime, "Invalid arguments");
                 }
 
-                auto dbi = db;
-                auto key = args[0].asString(runtime).utf8(runtime);
+                auto dbiIdx = args[0].asNumber();
+                auto key = args[1].asString(runtime).utf8(runtime);
+                auto tidx = args[2].asNumber();
+                
+                auto dbi = dbs[dbiIdx];
+                auto txn = txns[tidx];
                 
                 MDB_val keyV{key.size(), key.data()};
                 MDB_val dataV;
-                int rc = ::mdb_get(rtxn, dbi, &keyV, &dataV);
+                int rc = ::mdb_get(txn, dbi, &keyV, &dataV);
                 if (rc == MDB_SUCCESS) {
                     auto data = std::string{std::string_view(static_cast<char*>(dataV.mv_data), dataV.mv_size)};
                     return jsi::String::createFromUtf8(runtime, data);
@@ -317,81 +300,9 @@ namespace rnlmdb {
                 }
                 return jsi::Value(nullptr);
             }
-                                                         
-//                                                         auto get = jsi::Function::createFromHostFunction(
-//                                                             jsiRuntime,
-//                                                             jsi::PropNameID::forAscii(jsiRuntime, "get"),
-//                                                             2, // Number of arguments in function
-//                                                             [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-//
-//                                                                 if(!args[0].isString() || !args[1].isNumber())
-//                                                                 {
-//                                                                   throw jsi::JSError(runtime, "Invalid arguments");
-//                                                                 }
-//
-//
-//                                                                 auto dbi = db;
-//                                                                 auto key = args[0].asString(runtime).utf8(runtime);
-//
-//                                                                 std::string key2 = "key2";
-//
-//                                                                 MDB_val keyV1{key.size(), key.data()};
-//                                                                 MDB_val keyV2{key2.size(), key2.data()};
-//                                                                 MDB_val dataV1;
-//                                                                 MDB_val dataV2;
-//                                                                 MDB_txn* txn = nullptr;
-//
-//                                                                 mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
-//                                                                 int rc = ::mdb_get(txn, dbi, &keyV1, &dataV1);
-//                                                                 rc = ::mdb_get(txn, dbi, &keyV2, &dataV2);
-//                                                                 mdb_txn_abort(txn);
-//
-//                                                                 if (rc == MDB_SUCCESS) {
-//                                                 //                    mdb_txn_abort(txn);
-//                                                                     auto data = std::string{std::string_view(static_cast<char*>(dataV1.mv_data), dataV1.mv_size)};
-//                                                                     auto data2 = std::string{std::string_view(static_cast<char*>(dataV2.mv_data), dataV2.mv_size)};
-//                                                                     return jsi::String::createFromUtf8(runtime, data);
-//                                                                 }
-//                                                                 if (rc != MDB_NOTFOUND) {
-//                                                                     throw jsi::JSError(runtime, "Unable to get value");
-//                                                                 }
-//                                                                 return jsi::Value(nullptr);
-//                                                             }
-                                                         );
-        
-        
-//        auto get = jsi::Function::createFromHostFunction(
-//            jsiRuntime,
-//            jsi::PropNameID::forAscii(jsiRuntime, "get"),
-//            2, // Number of arguments in function
-//            [](jsi::Runtime& runtime, const jsi::Value& thisValue, const jsi::Value* args, size_t count) -> jsi::Value {
-//
-//                if(!args[0].isString() || !args[1].isNumber())
-//                {
-//                  throw jsi::JSError(runtime, "Invalid arguments");
-//                }
-//
-//
-//                auto dbi = db;
-//                auto key = args[0].asString(runtime).utf8(runtime);
-//
-//                MDB_txn *txn;
-//                MDB_val keyV{key.size(), key.data()};
-//                MDB_val dataV;
-//                mdb_txn_begin(env, nullptr, MDB_RDONLY, &txn);
-//                int rc = ::mdb_get(txn, dbi, &keyV, &dataV);
-//                mdb_txn_commit(txn);
-//
-//                if (rc == MDB_SUCCESS) {
-//                    auto data = std::string{std::string_view(static_cast<char*>(dataV.mv_data), dataV.mv_size)};
-//                    return jsi::String::createFromUtf8(runtime, data);
-//                }
-//                if (rc != MDB_NOTFOUND) {
-//                    throw jsi::JSError(runtime, "Unable to get value");
-//                }
-//                return jsi::Value(nullptr);
-//            }
-//        );
+
+         );
+    
 
         auto del = jsi::Function::createFromHostFunction(
             jsiRuntime,
@@ -444,7 +355,6 @@ namespace rnlmdb {
         jsiRuntimeGlobal.setProperty(jsiRuntime, "get", std::move(get));
         jsiRuntimeGlobal.setProperty(jsiRuntime, "del", std::move(del));
         jsiRuntimeGlobal.setProperty(jsiRuntime, "drop", std::move(drop));
-        jsiRuntimeGlobal.setProperty(jsiRuntime, "transaction", std::move(transaction));
         jsiRuntimeGlobal.setProperty(jsiRuntime, "beginTransaction", std::move(beginTransaction));
         jsiRuntimeGlobal.setProperty(jsiRuntime, "resetTransaction", std::move(resetTransaction));
         jsiRuntimeGlobal.setProperty(jsiRuntime, "commitTransaction", std::move(commitTransaction));

@@ -9,7 +9,7 @@
 
 This package embeds & provides React Native bindings for LMDB.
 
-NOTE: Under development, not ready for consumption yet!
+_NOTE: Under development, not ready for consumption yet!_
 
 </div>
 </div>
@@ -43,33 +43,32 @@ del('key2');
 
 ## Optimisation
 
-LMDB uses transactions for read/write ops. By default a new transaction is created for each op and this introduces overhead. Batch ops must always used a shared transaction to improve perf.
+LMDB uses transactions for read/write ops. Batch ops must always used a shared transaction to improve perf.
 
 Write lots of data in a single transaction:
 
 ```ts
-const wtxn = transaction(TRANSACTION_WRITE);
-wtxn.begin();
-put('some', 'data', wtxn);
-put('other', 'data', wtxn);
+const tidx = beginTransaction();
+put('some', 'data', tidx);
+put('other', 'data', tidx);
 // ...
-wtxn.commit(); // write the data to the db
+writeTransaction(tidx); // write the data to the db
 ```
 
 For reading data, you can use a global read transaction, then reset it to sync with the db.
 
 ```ts
 // Make this global, and adjust all get() calls to use this transaction
-const rtxn = transaction();
+const tidx = beginTransaction();
 
-const value1 = get('key1', rtxn);
-const value2 = get('key2', rtxn);
+const value1 = get('key1', tidx);
+const value2 = get('key2', tidx);
 
 // Elsewhere in your app, after making changes to your db...
 put('key1', 'new data');
-rtx.reset(); // this allow subsequent get() calls to use the latest db snapshot
+resetTransaction(tidx); // this allow subsequent get() calls to use the latest db snapshot
 
-const value1New = get('key1', rtxn);
+const value1New = get('key1', tidx);
 ```
 
 ## Motivation

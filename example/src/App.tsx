@@ -40,9 +40,8 @@ const {
   put,
   // putBatch,
   drop,
-  transaction,
-  // beginTransaction,.
-  // commitTransaction,
+  beginTransaction,
+  commitTransaction,
   // resetTransaction,
 } = open('subdb');
 results.lmdb.open = performance.now() - nowOpen;
@@ -67,13 +66,13 @@ export default function App() {
 
     const nowBatchPut = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      // put(`key${i}`, longString);
+      put(`key${i}`, longString);
     }
     results.lmdb.put10_000 = performance.now() - nowBatchPut;
 
     const nowBatchPutMmkv = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      // mmkvStorage.set(`key${i}`, getLongString());
+      mmkvStorage.set(`key${i}`, getLongString());
     }
     results.mmkv.put10_000 = performance.now() - nowBatchPutMmkv;
 
@@ -83,15 +82,15 @@ export default function App() {
     }
     results.mmkv.get10_000 = performance.now() - nowBatchGetMmkv;
 
-    const rtxn = transaction();
-    // beginTransaction(rtxn);
+    const rtxn = beginTransaction();
     console.log('rtxn', rtxn);
     console.log('foo');
     const nowBatchGet = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      // get(`key${i}`);
+      get(`key${i}`, rtxn);
     }
     results.lmdb.get10_000 = performance.now() - nowBatchGet;
+    commitTransaction(rtxn);
 
     // const batchData: BatchValues = [];
 
