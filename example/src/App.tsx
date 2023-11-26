@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, Text, Button } from 'react-native';
-import { open } from 'react-native-lmdb';
+import { open, init } from 'react-native-lmdb';
+
+import { MMKV } from 'react-native-mmkv';
+
+const mmkvStorage = new MMKV();
 
 type RunResults = {
   open?: number;
   get10_000?: number;
   put10_000?: number;
+  putBatch10_000?: number;
   get2?: number;
   put2?: number;
+};
+
+type ComparisonResults = {
+  lmdb: RunResults;
+  mmkv: RunResults;
 };
 
 function getLongString() {
@@ -20,44 +30,82 @@ function getLongString() {
 }
 
 const longString = getLongString();
-const results: RunResults = {};
+const results: ComparisonResults = { mmkv: {}, lmdb: {} };
+
+init('mydb5.mdb', 1024 * 1024 * 200);
 
 const nowOpen = performance.now();
-const { get, put } = open('mydb123.mdb', 1024 * 1024 * 100);
-results.open = performance.now() - nowOpen;
+const {
+  get,
+  put,
+  // putBatch,
+  drop,
+  beginTransaction,
+  commitTransaction,
+  // resetTransaction,
+} = open('subdb');
+results.lmdb.open = performance.now() - nowOpen;
 
 export default function App() {
-  const [memoryLeakStarted, setMemoryLeakStarted] = useState(false);
-  const [runResults, setRunResults] = useState<RunResults | undefined>();
+  const [memoryLeakStarted, _setMemoryLeakStarted] = useState(false);
+  const [runResults, setRunResults] = useState<ComparisonResults | undefined>();
 
-  console.log('not found', get('not found'));
+  // console.log('not found', get('not found'));
 
   function runBenchmarks() {
+    console.log('run');
     const nowPut = performance.now();
-    put('key1', JSON.stringify({ hello: 'world' }));
-    put('key2', JSON.stringify({ hello: 'world2' }));
-    results.put2 = performance.now() - nowPut;
+    // put('key1', JSON.stringify({ hello: 'world' }));
+    // put('key2', JSON.stringify({ hello: 'world2' }));
+    results.lmdb.put2 = performance.now() - nowPut;
 
-    const nowGet = performance.now();
-    // @ts-ignore
-    console.log(JSON.stringify(JSON.parse(get('key1'))));
-    // @ts-ignore
-    console.log(JSON.stringify(JSON.parse(get('key2'))));
-    results.get2 = performance.now() - nowGet;
+    // const nowGet = performance.now();
+    // console.log(get('key1'));
+    // console.log(get('key2'));
+    // results.lmdb.get2 = performance.now() - nowGet;
 
     const nowBatchPut = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      put(`key${i}`, `value${i}`);
+      put(`key${i}`, longString);
     }
-    results.put10_000 = performance.now() - nowBatchPut;
+    results.lmdb.put10_000 = performance.now() - nowBatchPut;
 
+    const nowBatchPutMmkv = performance.now();
+    for (let i = 0; i < 10_000; i++) {
+      mmkvStorage.set(`key${i}`, getLongString());
+    }
+    results.mmkv.put10_000 = performance.now() - nowBatchPutMmkv;
+
+    const nowBatchGetMmkv = performance.now();
+    for (let i = 0; i < 10_000; i++) {
+      mmkvStorage.getString(`key${i}`);
+    }
+    results.mmkv.get10_000 = performance.now() - nowBatchGetMmkv;
+
+    const rtxn = beginTransaction();
+    console.log('rtxn', rtxn);
+    console.log('foo');
     const nowBatchGet = performance.now();
     for (let i = 0; i < 10_000; i++) {
-      get(`key${i}`);
+      get(`key${i}`, rtxn);
     }
-    results.get10_000 = performance.now() - nowBatchGet;
+    results.lmdb.get10_000 = performance.now() - nowBatchGet;
+    commitTransaction(rtxn);
 
-    setRunResults(results);
+    // const batchData: BatchValues = [];
+
+    // for (let i = 0; i < 10_000; i++) {
+    //   batchData.push({
+    //     key: `key${i}`,
+    //     value: longString,
+    //   });
+    // }
+
+    // const nowBatchPut2 = performance.now();
+    // putBatch(batchData);
+    // results.putBatch10_000 = performance.now() - nowBatchPut2;
+
+    setRunResults({ ...results });
   }
 
   // Test if we have a memory leak in our native code.
@@ -67,30 +115,41 @@ export default function App() {
   // As you continue to run the test app memory will slowly increase but I don't
   // think this indicates a leak.
   async function runMemoryLeakTest() {
-    setMemoryLeakStarted(true);
-    for (let i = 0; i < 200_000; i++) {
-      // force a gc every 20_000
-      if (i % 20_000 === 0) {
-        await new Promise((res) => setTimeout(res));
-      }
-      put(`key1`, longString);
-      get(`key1`);
-    }
-    setMemoryLeakStarted(false);
+    // setMemoryLeakStarted(true);
+    // for (let i = 0; i < 200_000; i++) {
+    //   // force a gc every 20_000
+    //   if (i % 20_000 === 0) {
+    //     await new Promise((res) => setTimeout(res));
+    //   }
+    //   put(`key1`, longString);
+    //   get(`key1`);
+    // }
+    // setMemoryLeakStarted(false);
   }
+
+  function dropDb() {
+    drop();
+  }
+
   return (
     <View style={styles.container}>
       <Text>Hello LMDB</Text>
       <Button title="Run Benchmarks" onPress={runBenchmarks} />
       <Button title="Run Memory Leak Test" onPress={runMemoryLeakTest} />
+      <Button title="Drop db" onPress={dropDb} />
       {memoryLeakStarted && <Text>Memory leak test running...</Text>}
       {!!runResults && (
         <>
-          <Text>open: {runResults.open}ms</Text>
-          <Text>put (2): {runResults.put2}ms</Text>
-          <Text>get (2): {runResults.get2}ms</Text>
-          <Text>put (10_000): {runResults.put10_000}ms</Text>
-          <Text>get (10_000): {runResults.get10_000}ms</Text>
+          <Text>open: {runResults.lmdb.open}ms</Text>
+          <Text>put (2): {runResults.lmdb.put2}ms</Text>
+          <Text>get (2): {runResults.lmdb.get2}ms</Text>
+          <Text>lmdb put (10_000): {runResults.lmdb.put10_000}ms</Text>
+          <Text>
+            lmdb put batch (10_000): {runResults.lmdb.putBatch10_000}ms
+          </Text>
+          <Text>lmdb get (10_000): {runResults.lmdb.get10_000}ms</Text>
+          <Text>mmkv put (10_000): {runResults.mmkv.put10_000}ms</Text>
+          <Text>mmkv get (10_000): {runResults.mmkv.get10_000}ms</Text>
         </>
       )}
     </View>

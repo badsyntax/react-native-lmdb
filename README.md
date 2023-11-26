@@ -4,9 +4,11 @@
 <a href="https://www.symas.com/lmdb"><img alt="LMDB" src="./img/lmdb-logo.png" width="130" align="left" /></a>
 <div>
 
-[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store. It can handle vast amounts of data and is slightly faster at reading than [MMKV](https://github.com/Tencent/MMKV).
+[LMDB](https://www.symas.com/lmdb) (Lightning Memory-Mapped Database) is an embedded transactional database in the form of a key-value store.
 
 This package embeds & provides React Native bindings for LMDB.
+
+_NOTE: Under development, not ready for consumption yet!_
 
 </div>
 </div>
@@ -40,28 +42,43 @@ del('key1');
 del('key2');
 ```
 
+## Optimisation
+
+LMDB uses transactions for read/write ops. Batch ops should use a shared transaction to improve perf.
+
+Write lots of data in a single transaction:
+
+```ts
+const tidx = beginTransaction();
+put('some', 'data', tidx);
+put('other', 'data', tidx);
+// ...
+writeTransaction(tidx); // write the data to the db
+```
+
+For reading data, you can use a global read transaction, then reset it to sync with the db.
+
+```ts
+// Make this global, and adjust all get() calls to use this transaction
+const tidx = beginTransaction();
+
+const value1 = get('key1', tidx);
+const value2 = get('key2', tidx);
+
+// Elsewhere in your app, after making changes to your db...
+put('key1', 'new data');
+resetTransaction(tidx); // this allow subsequent get() calls to use the latest db snapshot
+
+const value1New = get('key1', tidx);
+```
+
 ## Motivation
 
 MMKV is a great tool but isn't designed for vast amounts of data.
 
-// @TODO: expand
-
-<details>
-<summary>Toggle MMKV related issues</summary>
-
-- https://github.com/Tencent/MMKV/issues/610
-- https://github.com/mrousavy/react-native-mmkv/issues/440
-- https://github.com/mrousavy/react-native-mmkv/issues/397
-- https://github.com/apollographql/apollo-cache-persist/issues/500
-- https://github.com/ammarahm-ed/react-native-mmkv-storage/issues/286
-
-</details>
-
-<br/>
-
 SQLite can handle vast amounts of data but is async thus increases complexity and introduces possible race conditions.
 
-LMDB is mature, synchronous, and can handle anything you throw at it.
+LMDB is mature, synchronous, and can handle anything you throw at it. 💪
 
 ## Goals of this Project
 
@@ -70,28 +87,68 @@ LMDB is mature, synchronous, and can handle anything you throw at it.
 
 ## Benchmarks
 
-### iOS Simulator:
+I am still in the process of profiling and optimising.
 
-| Action           | react-native-lmdb | react-native-mmkv |
+<!-- <table width="100%"><tr><td>
+
+### iOS (Simulator)
+
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
+
+</td><td>
+
+### iOS (iPhone 7)
+
+|                  | react-native-mmkv | react-native-lmdb |
 | ---------------- | ----------------- | ----------------- |
-| put 10_000 items |                   |                   |
-| get 10_000 items |                   |                   |
-| put 50_000 items |                   |                   |
-| get 50_000 items |                   |                   |
+| put 10_000       |                   |                   |
+| put 10_000 (txn) |                   |                   |
+| get 10_000       |                   |                   |
+| db size run 1    |                   |                   |
+| db size run 2    |                   |                   |
+| db size run 3    |                   |                   |
 
-### Android Emulator:
+</td></tr></table>
 
-| Action           | react-native-lmdb | react-native-mmkv |
-| ---------------- | ----------------- | ----------------- |
-| put 10_000 items |                   |                   |
-| get 10_000 items |                   |                   |
-| put 50_000 items |                   |                   |
-| get 50_000 items |                   |                   |
+<table width="100%"><tr><td>
+
+### Android (Emulator)
+
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
+
+</td><td>
+
+### Android (Pixel 6a)
+
+|               | react-native-mmkv | react-native-lmdb |
+| ------------- | ----------------- | ----------------- |
+| put 10_000    |                   |                   |
+| get 10_000    |                   |                   |
+| db size run 1 |                   |                   |
+| db size run 2 |                   |                   |
+| db size run 3 |                   |                   |
+
+</td></tr></table>
+
+We can conclude:
+
+// @TODO -->
 
 ## Credits
 
 - Thanks to [sysmas](https://www.symas.com/) for open sourcing lmdb.
-- Thanks to [drycpp/lmdb++](https://github.com/drycpp/lmdbxx) & [hoytech/lmdb++](https://github.com/hoytech/lmdbxx) for the useful c++ wrapper.
 
 ## Donate
 
@@ -108,3 +165,7 @@ MIT
 ---
 
 Made with [create-react-native-library](https://github.com/callstack/react-native-builder-bob)
+
+```
+
+```
